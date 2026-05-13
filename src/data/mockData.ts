@@ -1,0 +1,111 @@
+import { Flight } from '../types';
+
+export const mockFlights: Flight[] = [
+  {
+    id: '1',
+    flightNumber: 'NA101',
+    airline: 'Nepal Airways',
+    from: 'Kathmandu (KTM)',
+    to: 'New York (JFK)',
+    departureTime: '2024-01-15T10:30:00Z',
+    arrivalTime: '2024-01-15T18:45:00Z',
+    duration: '8h 15m',
+    price: 899,
+    availableSeats: 45,
+    aircraft: 'Boeing 777',
+    class: 'Economy'
+  },
+  {
+    id: '2',
+    flightNumber: 'NA102',
+    airline: 'Nepal Airways',
+    from: 'Kathmandu (KTM)',
+    to: 'London (LHR)',
+    departureTime: '2024-01-15T14:20:00Z',
+    arrivalTime: '2024-01-15T20:35:00Z',
+    duration: '6h 15m',
+    price: 750,
+    availableSeats: 32,
+    aircraft: 'Airbus A330',
+    class: 'Economy'
+  },
+  {
+    id: '3',
+    flightNumber: 'NA103',
+    airline: 'Nepal Airways',
+    from: 'Kathmandu (KTM)',
+    to: 'Dubai (DXB)',
+    departureTime: '2024-01-15T16:45:00Z',
+    arrivalTime: '2024-01-15T21:30:00Z',
+    duration: '4h 45m',
+    price: 450,
+    availableSeats: 28,
+    aircraft: 'Boeing 737',
+    class: 'Economy'
+  },
+  {
+    id: '4',
+    flightNumber: 'NA201',
+    airline: 'Nepal Airways',
+    from: 'Kathmandu (KTM)',
+    to: 'New York (JFK)',
+    departureTime: '2024-01-15T10:30:00Z',
+    arrivalTime: '2024-01-15T18:45:00Z',
+    duration: '8h 15m',
+    price: 1899,
+    availableSeats: 12,
+    aircraft: 'Boeing 777',
+    class: 'Business'
+  },
+  {
+    id: '5',
+    flightNumber: 'NA104',
+    airline: 'Nepal Airways',
+    from: 'Kathmandu (KTM)',
+    to: 'Tokyo (NRT)',
+    departureTime: '2024-01-15T22:15:00Z',
+    arrivalTime: '2024-01-16T08:30:00Z',
+    duration: '10h 15m',
+    price: 1200,
+    availableSeats: 18,
+    aircraft: 'Boeing 787',
+    class: 'Economy'
+  },
+  {
+    id: '6',
+    flightNumber: 'NA105',
+    airline: 'Nepal Airways',
+    from: 'Kathmandu (KTM)',
+    to: 'Singapore (SIN)',
+    departureTime: '2024-01-15T08:00:00Z',
+    arrivalTime: '2024-01-15T15:45:00Z',
+    duration: '7h 45m',
+    price: 680,
+    availableSeats: 25,
+    aircraft: 'Airbus A320',
+    class: 'Economy'
+  }
+];
+
+export const cities = [
+  'Kathmandu (KTM)',
+  'New York (JFK)',
+  'London (LHR)',
+  'Dubai (DXB)',
+  'Tokyo (NRT)',
+  'Singapore (SIN)',
+  'Bangkok (BKK)',
+  'Delhi (DEL)',
+  'Mumbai (BOM)',
+  'Doha (DOH)',
+  'Istanbul (IST)',
+  'Frankfurt (FRA)',
+  'Paris (CDG)',
+  'Amsterdam (AMS)',
+  'Hong Kong (HKG)',
+  'Seoul (ICN)',
+  'Sydney (SYD)',
+  'Melbourne (MEL)',
+  'Los Angeles (LAX)',
+  'San Francisco (SFO)'
+];

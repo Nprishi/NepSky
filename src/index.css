@@ -1,0 +1,155 @@
+@import './styles/futuristic.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+  color: #1f2937;
+  background-color: #f9fafb;
+}
+
+#root {
+  max-width: 1600px;
+  margin: 0 auto;
+  /* padding: 2rem; */
+  text-align: center;
+  width: 100%;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+}
+
+/* Fix input and select styling */
+input, select, textarea {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+/* Fix dropdown options */
+select option {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+/* Fix placeholder text */
+input::placeholder, textarea::placeholder {
+  color: #9ca3af !important;
+}
+
+/* Fix date input calendar styling */
+input[type="date"] {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+  position: relative;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  color: #6b7280;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  background-color: #f3f4f6;
+}
+
+/* Fix date input text visibility */
+input[type="date"]::-webkit-datetime-edit {
+  color: #1f2937 !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-text {
+  color: #1f2937 !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-month-field {
+  color: #1f2937 !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-day-field {
+  color: #1f2937 !important;
+}
+
+input[type="date"]::-webkit-datetime-edit-year-field {
+  color: #1f2937 !important;
+}
+
+/* Fix date input when empty */
+input[type="date"]:invalid {
+  color: #9ca3af !important;
+}
+
+/* Fix date input focus state */
+input[type="date"]:focus {
+  color: #1f2937 !important;
+  background-color: #ffffff !important;
+}
+
+/* Ensure date picker dropdown is visible */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  display: block;
+  background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%236b7280'%3e%3cpath fill-rule='evenodd' d='M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z' clip-rule='evenodd'/%3e%3c/svg%3e") no-repeat center;
+  background-size: 16px 16px;
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+}
+
+/* Fix calendar popup visibility */
+input[type="date"]::-webkit-calendar-picker-indicator:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
