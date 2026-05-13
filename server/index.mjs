@@ -5,37 +5,40 @@ import { supabase } from './supabaseClient.mjs'
 import { query as pgQuery, isPgEnabled } from './pgClient.mjs'
 
 const app = express()
+
+// Middleware
+app.use(cors())
 app.use(express.json())
 
-app.get('/health', (req, res) => res.json({ status: 'ok' }))
+// Root route (fixes 404 issue)
+app.get('/', (req, res) => {
+  res.send('🚀 NepSky Backend is Running')
+})
+
+// Health check
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok' })
+})
 
 app.get('/flights', async (req, res) => {
-  const { data, error } = await supabase.from('flights').select('*').limit(50)
-  if (error) return res.status(500).json({ error: error.message })
+  const { data, error } = await supabase
+    .from('flights')
+    .select('*')
+    .limit(50)
+
+  if (error) {
+    return res.status(500).json({ error: error.message })
+  }
+
   res.json(data)
 })
 
 app.get('/pg/flights', async (req, res) => {
   if (!isPgEnabled()) {
-    return res.status(503).json({ error: 'Postgres is not configured on the server. Set DATABASE_URL or PG* env vars.' })
+    return res.status(503).json({
+      error: 'Postgres is not configured on the server'
+    })
   }
-
-  app.get('/recommendations', async (req, res) => {
-    try {
-      const { userId } = req.query
-
-      if (!userId) {
-        return res.status(400).json({ error: 'userId is required' })
-      }
-
-      const results = await getRecommendations(userId)
-
-      res.json(results)
-    } catch (error) {
-      console.log(error)
-      res.status(500).json({ error: error.message })
-    }
-  })
 
   try {
     const result = await pgQuery('SELECT * FROM flights LIMIT 50')
@@ -45,20 +48,38 @@ app.get('/pg/flights', async (req, res) => {
   }
 })
 
+app.get('/recommendations', async (req, res) => {
+  try {
+    const { userId } = req.query
+
+    if (!userId) {
+      return res.status(400).json({ error: 'userId is required' })
+    }
+
+    const results = await getRecommendations(userId)
+    res.json(results)
+
+  } catch (error) {
+    console.log(error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+/* RECOMMENDATION ENGINE*/
 async function getRecommendations(userId) {
-  // 1. Get all flights (same source as /flights)
+  // 1. Get flights
   const { data: flights } = await supabase
     .from('flights')
     .select('*')
     .limit(100)
 
-  // 2. Get user booking history
+  // 2. Get user history
   const { data: bookings } = await supabase
-    .from('myorder') // change if your table name differs
+    .from('myorder')
     .select('*')
     .eq('customer_id', userId)
 
-  // 3. Build Collaborative Filtering map
+  // 3. Build frequency map
   const routeFrequency = {}
 
   bookings?.forEach((b) => {
@@ -66,10 +87,9 @@ async function getRecommendations(userId) {
     routeFrequency[key] = (routeFrequency[key] || 0) + 1
   })
 
-  // 4. Score flights (BM25 + CF hybrid)
+  // 4. Score flights
   const scoredFlights = flights.map((f) => {
     const key = `${f.from_location}-${f.to_location}`
-
 
     let bm25 = 0
 
@@ -79,25 +99,25 @@ async function getRecommendations(userId) {
     if (text.includes('dubai')) bm25 += 0.4
     if (text.includes('singapore')) bm25 += 0.2
 
-    // Collaborative Filtering
     const cf = routeFrequency[key]
       ? Math.min(routeFrequency[key] * 0.3, 1)
       : 0.2
 
-    // Final Score
     const score = 0.6 * bm25 + 0.4 * cf
 
     return {
       ...f,
-      score,
+      score
     }
   })
 
-  // sort best flights first
+  // sort best first
   scoredFlights.sort((a, b) => b.score - a.score)
 
   return scoredFlights.slice(0, 6)
 }
 
 const port = process.env.PORT || 4000
-app.listen(port, () => console.log(`Server listening on ${port}`))
+app.listen(port, () => {
+  console.log(`🚀 Server running on port ${port}`)
+})
