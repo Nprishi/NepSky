@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, NavLink, useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Menu,
   X,
@@ -13,9 +13,8 @@ import {
   ChevronDown,
   Plane,
   Loader2,
-} from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import logo from '../../dist/assets/Main Logo.png';
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
 
 type NotificationItem = {
   id: number;
@@ -35,32 +34,32 @@ const Header: React.FC = () => {
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
 
-  const [selectedLanguage, setSelectedLanguage] = useState('EN');
-  const [selectedCurrency, setSelectedCurrency] = useState('NPR');
+  const [selectedLanguage, setSelectedLanguage] = useState("EN");
+  const [selectedCurrency, setSelectedCurrency] = useState("NPR");
 
-  const [locationName, setLocationName] = useState('Detecting location...');
+  const [locationName, setLocationName] = useState("Detecting location...");
   const [isLocating, setIsLocating] = useState(true);
 
   const [notifications, setNotifications] = useState<NotificationItem[]>([
     {
       id: 1,
-      title: 'Booking Update',
-      message: 'Your Kathmandu to Dubai flight is confirmed.',
-      time: '2 min ago',
+      title: "Booking Update",
+      message: "Your Kathmandu to Dubai flight is confirmed.",
+      time: "2 min ago",
       read: false,
     },
     {
       id: 2,
-      title: 'Check-in Reminder',
-      message: 'Online check-in opens 24 hours before departure.',
-      time: '1 hour ago',
+      title: "Check-in Reminder",
+      message: "Online check-in opens 24 hours before departure.",
+      time: "1 hour ago",
       read: false,
     },
     {
       id: 3,
-      title: 'Special Offer',
-      message: 'Get discounted fares on selected international routes.',
-      time: 'Today',
+      title: "Special Offer",
+      message: "Get discounted fares on selected international routes.",
+      time: "Today",
       read: true,
     },
   ]);
@@ -73,33 +72,33 @@ const Header: React.FC = () => {
 
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.read).length,
-    [notifications]
+    [notifications],
   );
 
   const handleLogout = () => {
     logout();
     setIsProfileOpen(false);
-    navigate('/');
+    navigate("/");
   };
 
   const getUserInitials = (firstName?: string, lastName?: string) => {
-    const first = firstName?.charAt(0) || '';
-    const last = lastName?.charAt(0) || '';
-    return `${first}${last}`.toUpperCase() || 'U';
+    const first = firstName?.charAt(0) || "";
+    const last = lastName?.charAt(0) || "";
+    return `${first}${last}`.toUpperCase() || "U";
   };
 
   const resolveProfileImage = (imagePath?: string) => {
     if (!imagePath) return null;
 
-    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+    if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
       return imagePath;
     }
 
     // Change this to your backend base URL
     const API_BASE_URL =
-      import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+      import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-    return `${API_BASE_URL}${imagePath.startsWith('/') ? imagePath : `/${imagePath}`}`;
+    return `${API_BASE_URL}${imagePath.startsWith("/") ? imagePath : `/${imagePath}`}`;
   };
 
   const userProfileImage = resolveProfileImage(user?.profilePicture);
@@ -116,7 +115,10 @@ const Header: React.FC = () => {
         setIsProfileOpen(false);
       }
 
-      if (notificationRef.current && !notificationRef.current.contains(target)) {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(target)
+      ) {
         setIsNotificationOpen(false);
       }
 
@@ -136,18 +138,17 @@ const Header: React.FC = () => {
       }
     };
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
 
   useEffect(() => {
     if (user) {
       const currentTime = new Date().toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit'
+        hour: "2-digit",
+        minute: "2-digit",
       });
 
-      // Simple helper to parse basic device info
       const getDeviceName = () => {
         const ua = navigator.userAgent;
         if (ua.includes("Win")) return "Windows PC";
@@ -160,20 +161,20 @@ const Header: React.FC = () => {
 
       const loginNotification: NotificationItem = {
         id: Date.now(), // Unique ID
-        title: 'New Login Detected',
+        title: "New Login Detected",
         message: `User Login: ${currentTime} on ${getDeviceName()}`,
-        time: 'Just now',
+        time: "Just now",
         read: false,
       };
 
       setNotifications((prev) => [loginNotification, ...prev]);
     }
-  }, [user]); // Runs whenever the user object changes (e.g., on login)
+  }, [user]);
 
   useEffect(() => {
     const detectLocation = async () => {
       if (!navigator.geolocation) {
-        setLocationName('Location unavailable');
+        setLocationName("Location unavailable");
         setIsLocating(false);
         return;
       }
@@ -184,7 +185,7 @@ const Header: React.FC = () => {
             const { latitude, longitude } = position.coords;
 
             const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`
+              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
             );
 
             const data = await response.json();
@@ -195,22 +196,22 @@ const Header: React.FC = () => {
               data.address?.municipality ||
               data.address?.village ||
               data.address?.county ||
-              'Unknown area';
+              "Unknown area";
 
-            const country = data.address?.country || 'Unknown country';
+            const country = data.address?.country || "Unknown country";
 
             setLocationName(`${city}, ${country}`);
           } catch (error) {
-            setLocationName('Location unavailable');
+            setLocationName("Location unavailable");
           } finally {
             setIsLocating(false);
           }
         },
         () => {
-          setLocationName('Location permission denied');
+          setLocationName("Location permission denied");
           setIsLocating(false);
         },
-        { enableHighAccuracy: true, timeout: 10000 }
+        { enableHighAccuracy: true, timeout: 10000 },
       );
     };
 
@@ -218,26 +219,23 @@ const Header: React.FC = () => {
   }, []);
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
-    `relative font-medium transition-all duration-200 ${isActive
-      ? 'text-blue-600'
-      : 'text-slate-700 hover:text-blue-600'
+    `relative font-medium transition-all duration-200 ${
+      isActive ? "text-blue-600" : "text-slate-700 hover:text-blue-600"
     }`;
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/75 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-      {/* Top utility bar */}
       <div className="hidden lg:block border-b border-slate-200/70 bg-slate-50/80">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex min-h-[42px] items-center justify-between gap-4 text-sm text-slate-600">
             <div className="flex min-w-0 items-center gap-2 truncate">
               <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
               <span className="truncate">
-                {isLocating ? 'Detecting your location...' : locationName}
+                {isLocating ? "Detecting your location..." : locationName}
               </span>
             </div>
 
             <div className="flex items-center gap-3">
-              {/* Language */}
               <div className="relative" ref={languageRef}>
                 <button
                   onClick={() => {
@@ -253,26 +251,26 @@ const Header: React.FC = () => {
 
                 {isLanguageOpen && (
                   <div className="absolute z-10 right-0 mt-2 w-36 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    {['EN', 'NP'].map((lang) => (
+                    {["EN", "NP"].map((lang) => (
                       <button
                         key={lang}
                         onClick={() => {
                           setSelectedLanguage(lang);
                           setIsLanguageOpen(false);
                         }}
-                        className={`w-full px-4 py-3 text-left text-sm transition hover:bg-blue-50 ${selectedLanguage === lang
-                          ? 'bg-blue-50 font-semibold text-blue-600'
-                          : 'text-slate-700'
-                          }`}
+                        className={`w-full px-4 py-3 text-left text-sm transition hover:bg-blue-50 ${
+                          selectedLanguage === lang
+                            ? "bg-blue-50 font-semibold text-blue-600"
+                            : "text-slate-700"
+                        }`}
                       >
-                        {lang === 'EN' ? 'English' : 'Nepali'}
+                        {lang === "EN" ? "English" : "Nepali"}
                       </button>
                     ))}
                   </div>
                 )}
               </div>
 
-              {/* Currency */}
               <div className="relative" ref={currencyRef}>
                 <button
                   onClick={() => {
@@ -287,17 +285,18 @@ const Header: React.FC = () => {
 
                 {isCurrencyOpen && (
                   <div className="absolute z-10 right-0 mt-2 w-32 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    {['NPR', 'USD'].map((currency) => (
+                    {["NPR", "USD"].map((currency) => (
                       <button
                         key={currency}
                         onClick={() => {
                           setSelectedCurrency(currency);
                           setIsCurrencyOpen(false);
                         }}
-                        className={`w-full px-4 py-3 text-left text-sm transition hover:bg-blue-50 ${selectedCurrency === currency
-                          ? 'bg-blue-50 font-semibold text-blue-600'
-                          : 'text-slate-700'
-                          }`}
+                        className={`w-full px-4 py-3 text-left text-sm transition hover:bg-blue-50 ${
+                          selectedCurrency === currency
+                            ? "bg-blue-50 font-semibold text-blue-600"
+                            : "text-slate-700"
+                        }`}
                       >
                         {currency}
                       </button>
@@ -313,11 +312,10 @@ const Header: React.FC = () => {
       {/* Main header */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex min-h-[74px] items-center justify-between gap-4">
-          {/* Logo */}
           <Link to="/" className="flex min-w-0 items-center gap-3">
             <div className="relative shrink-0">
               <img
-                src={logo}
+                src="/Main-Logo.png"
                 alt="NepSky Logo"
                 className="h-12 w-12 rounded-full object-contain ring-2 ring-blue-100 sm:h-14 sm:w-14"
               />
@@ -338,11 +336,16 @@ const Header: React.FC = () => {
             </div>
           </Link>
 
-          {/* Desktop nav */}
           <nav className="hidden xl:flex items-center gap-8">
             <NavLink to="/flights" className={navLinkClass}>
               {({ isActive }) => (
-                <span className={isActive ? 'after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600' : ''}>
+                <span
+                  className={
+                    isActive
+                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
+                      : ""
+                  }
+                >
                   Flights
                 </span>
               )}
@@ -350,7 +353,13 @@ const Header: React.FC = () => {
 
             <NavLink to="/my-bookings" className={navLinkClass}>
               {({ isActive }) => (
-                <span className={isActive ? 'after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600' : ''}>
+                <span
+                  className={
+                    isActive
+                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
+                      : ""
+                  }
+                >
                   My Bookings
                 </span>
               )}
@@ -358,7 +367,13 @@ const Header: React.FC = () => {
 
             <NavLink to="/check-in" className={navLinkClass}>
               {({ isActive }) => (
-                <span className={isActive ? 'after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600' : ''}>
+                <span
+                  className={
+                    isActive
+                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
+                      : ""
+                  }
+                >
                   Check-in
                 </span>
               )}
@@ -366,7 +381,13 @@ const Header: React.FC = () => {
 
             <NavLink to="/support" className={navLinkClass}>
               {({ isActive }) => (
-                <span className={isActive ? 'after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600' : ''}>
+                <span
+                  className={
+                    isActive
+                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
+                      : ""
+                  }
+                >
                   Support
                 </span>
               )}
@@ -375,10 +396,11 @@ const Header: React.FC = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mobile location */}
             <div className="hidden md:flex lg:hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 max-w-[220px]">
               <MapPin className="h-4 w-4 shrink-0 text-blue-600" />
-              <span className="truncate">{isLocating ? 'Locating...' : locationName}</span>
+              <span className="truncate">
+                {isLocating ? "Locating..." : locationName}
+              </span>
             </div>
 
             {/* Only show Notifications if user is logged in */}
@@ -399,11 +421,12 @@ const Header: React.FC = () => {
                   )}
                 </button>
 
-                {/* Notification Dropdown Content */}
                 {isNotificationOpen && (
                   <div className="absolute right-0 mt-3 w-[320px] sm:w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                     <div className="flex items-center justify-between border-b px-4 py-3">
-                      <h3 className="font-semibold text-slate-800">Notifications</h3>
+                      <h3 className="font-semibold text-slate-800">
+                        Notifications
+                      </h3>
                       <button
                         onClick={markAllAsRead}
                         className="text-sm font-medium text-blue-600 hover:text-blue-700"
@@ -416,14 +439,21 @@ const Header: React.FC = () => {
                         notifications.map((item) => (
                           <div
                             key={item.id}
-                            className={`border-b px-4 py-3 transition hover:bg-slate-50 ${!item.read ? 'bg-blue-50/50' : 'bg-white'
-                              }`}
+                            className={`border-b px-4 py-3 transition hover:bg-slate-50 ${
+                              !item.read ? "bg-blue-50/50" : "bg-white"
+                            }`}
                           >
                             <div className="flex items-start justify-between gap-3">
                               <div>
-                                <p className="font-medium text-slate-800">{item.title}</p>
-                                <p className="mt-1 text-sm text-slate-600">{item.message}</p>
-                                <p className="mt-2 text-xs text-slate-400">{item.time}</p>
+                                <p className="font-medium text-slate-800">
+                                  {item.title}
+                                </p>
+                                <p className="mt-1 text-sm text-slate-600">
+                                  {item.message}
+                                </p>
+                                <p className="mt-2 text-xs text-slate-400">
+                                  {item.time}
+                                </p>
                               </div>
                               {!item.read && (
                                 <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" />
@@ -457,7 +487,8 @@ const Header: React.FC = () => {
                     alt="Profile"
                     className="h-9 w-9 rounded-full object-cover ring-2 ring-blue-100"
                     onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display = 'none';
+                      (e.currentTarget as HTMLImageElement).style.display =
+                        "none";
                     }}
                   />
                 ) : (
@@ -498,7 +529,9 @@ const Header: React.FC = () => {
                         <p className="truncate font-semibold">
                           {user.firstName} {user.lastName}
                         </p>
-                        <p className="truncate text-sm text-blue-50">{user.email}</p>
+                        <p className="truncate text-sm text-blue-50">
+                          {user.email}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -560,148 +593,156 @@ const Header: React.FC = () => {
             </div>
           )}
 
-          {/* Mobile menu button */}
           <button
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             className="xl:hidden rounded-full border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
           >
-            {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {isMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu */}
-      {
-        isMenuOpen && (
-          <div className="xl:hidden border-t border-slate-200 bg-white shadow-2xl" ref={mobileMenuRef}>
-            <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-              {/* Mobile utility row */}
-              <div className="mb-4 grid gap-3 sm:grid-cols-3">
-                <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                  {isLocating ? (
-                    <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                  ) : (
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                  )}
-                  <span className="truncate">{locationName}</span>
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
-                  <span className="font-medium text-slate-600">Language</span>
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="bg-transparent font-semibold text-slate-800 outline-none"
-                  >
-                    <option value="EN">English</option>
-                    <option value="NP">Nepali</option>
-                  </select>
-                </div>
-
-                <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
-                  <span className="font-medium text-slate-600">Currency</span>
-                  <select
-                    value={selectedCurrency}
-                    onChange={(e) => setSelectedCurrency(e.target.value)}
-                    className="bg-transparent font-semibold text-slate-800 outline-none"
-                  >
-                    <option value="NPR">NPR</option>
-                    <option value="USD">USD</option>
-                  </select>
-                </div>
+      {isMenuOpen && (
+        <div
+          className="xl:hidden border-t border-slate-200 bg-white shadow-2xl"
+          ref={mobileMenuRef}
+        >
+          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
+            {/* Mobile utility row */}
+            <div className="mb-4 grid gap-3 sm:grid-cols-3">
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+                {isLocating ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+                ) : (
+                  <MapPin className="h-4 w-4 text-blue-600" />
+                )}
+                <span className="truncate">{locationName}</span>
               </div>
 
-              <nav className="flex flex-col gap-2">
-                <NavLink
-                  to="/"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `rounded-2xl px-4 py-3 font-medium transition ${isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
-                    }`
-                  }
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+                <span className="font-medium text-slate-600">Language</span>
+                <select
+                  value={selectedLanguage}
+                  onChange={(e) => setSelectedLanguage(e.target.value)}
+                  className="bg-transparent font-semibold text-slate-800 outline-none"
                 >
-                  Home
-                </NavLink>
+                  <option value="EN">English</option>
+                  <option value="NP">Nepali</option>
+                </select>
+              </div>
 
-                <NavLink
-                  to="/flights"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `rounded-2xl px-4 py-3 font-medium transition ${isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
-                    }`
-                  }
+              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
+                <span className="font-medium text-slate-600">Currency</span>
+                <select
+                  value={selectedCurrency}
+                  onChange={(e) => setSelectedCurrency(e.target.value)}
+                  className="bg-transparent font-semibold text-slate-800 outline-none"
                 >
-                  Flights
-                </NavLink>
-
-                <NavLink
-                  to="/my-bookings"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `rounded-2xl px-4 py-3 font-medium transition ${isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  My Bookings
-                </NavLink>
-
-                <NavLink
-                  to="/check-in"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `rounded-2xl px-4 py-3 font-medium transition ${isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  Check-in
-                </NavLink>
-
-                <NavLink
-                  to="/support"
-                  onClick={() => setIsMenuOpen(false)}
-                  className={({ isActive }) =>
-                    `rounded-2xl px-4 py-3 font-medium transition ${isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-slate-700 hover:bg-slate-50'
-                    }`
-                  }
-                >
-                  Support
-                </NavLink>
-              </nav>
-
-              {!user && (
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <Link
-                    to="/select-login"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="rounded-2xl border border-slate-200 px-4 py-3 text-center font-medium text-slate-700 transition hover:bg-slate-50"
-                  >
-                    Login
-                  </Link>
-
-                  <Link
-                    to="/select-signup"
-                    onClick={() => setIsMenuOpen(false)}
-                    className="rounded-2xl bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-3 text-center font-medium text-white shadow-lg"
-                  >
-                    Sign Up
-                  </Link>
-                </div>
-              )}
+                  <option value="NPR">NPR</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
             </div>
+
+            <nav className="flex flex-col gap-2">
+              <NavLink
+                to="/"
+                onClick={() => setIsMenuOpen(false)}
+                className={({ isActive }) =>
+                  `rounded-2xl px-4 py-3 font-medium transition ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`
+                }
+              >
+                Home
+              </NavLink>
+
+              <NavLink
+                to="/flights"
+                onClick={() => setIsMenuOpen(false)}
+                className={({ isActive }) =>
+                  `rounded-2xl px-4 py-3 font-medium transition ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`
+                }
+              >
+                Flights
+              </NavLink>
+
+              <NavLink
+                to="/my-bookings"
+                onClick={() => setIsMenuOpen(false)}
+                className={({ isActive }) =>
+                  `rounded-2xl px-4 py-3 font-medium transition ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`
+                }
+              >
+                My Bookings
+              </NavLink>
+
+              <NavLink
+                to="/check-in"
+                onClick={() => setIsMenuOpen(false)}
+                className={({ isActive }) =>
+                  `rounded-2xl px-4 py-3 font-medium transition ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`
+                }
+              >
+                Check-in
+              </NavLink>
+
+              <NavLink
+                to="/support"
+                onClick={() => setIsMenuOpen(false)}
+                className={({ isActive }) =>
+                  `rounded-2xl px-4 py-3 font-medium transition ${
+                    isActive
+                      ? "bg-blue-50 text-blue-600"
+                      : "text-slate-700 hover:bg-slate-50"
+                  }`
+                }
+              >
+                Support
+              </NavLink>
+            </nav>
+
+            {!user && (
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <Link
+                  to="/select-login"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="rounded-2xl border border-slate-200 px-4 py-3 text-center font-medium text-slate-700 transition hover:bg-slate-50"
+                >
+                  Login
+                </Link>
+
+                <Link
+                  to="/select-signup"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="rounded-2xl bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-3 text-center font-medium text-white shadow-lg"
+                >
+                  Sign Up
+                </Link>
+              </div>
+            )}
           </div>
-        )
-      }
-    </header >
+        </div>
+      )}
+    </header>
   );
 };
 

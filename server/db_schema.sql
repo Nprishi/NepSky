@@ -1,8 +1,6 @@
 
--- Enable required extensions (run as a superuser / owner of DB)
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Users table (app-level metadata; authentication may still be handled by Supabase auth)
 CREATE TABLE IF NOT EXISTS users (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   email text UNIQUE NOT NULL,
@@ -18,7 +16,6 @@ CREATE TABLE IF NOT EXISTS users (
   suspended_reason text
 );
 
--- Flights table (columns used by the frontend)
 CREATE TABLE IF NOT EXISTS flights (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   flight_number text UNIQUE NOT NULL,
@@ -36,7 +33,6 @@ CREATE TABLE IF NOT EXISTS flights (
   updated_at timestamptz DEFAULT now()
 );
 
--- Bookings table
 CREATE TABLE IF NOT EXISTS bookings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES users(id) ON DELETE SET NULL,
@@ -54,7 +50,6 @@ CREATE TABLE IF NOT EXISTS bookings (
   updated_at timestamptz DEFAULT now()
 );
 
--- Optional seats table (if you want to track seat inventory per flight)
 CREATE TABLE IF NOT EXISTS seats (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   flight_id uuid REFERENCES flights(id) ON DELETE CASCADE,
@@ -66,12 +61,11 @@ CREATE TABLE IF NOT EXISTS seats (
   UNIQUE(flight_id, seat_number)
 );
 
--- Helpful indexes
 CREATE INDEX IF NOT EXISTS idx_flights_departure_time ON flights(departure_time);
 CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON bookings(user_id);
 CREATE INDEX IF NOT EXISTS idx_bookings_booking_reference ON bookings(booking_reference);
 
--- Example: add a sample admin user (change email as needed)
+
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM users WHERE email = 'adminself@gmail.com') THEN
@@ -79,10 +73,7 @@ BEGIN
   END IF;
 END$$;
 
--- End of schema
 
--- Additional tables present in Supabase project UI
--- 1) user_details: extended profile information (one-to-one with users)
 CREATE TABLE IF NOT EXISTS user_details (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid UNIQUE REFERENCES users(id) ON DELETE CASCADE,
@@ -100,7 +91,7 @@ CREATE TABLE IF NOT EXISTS user_details (
 
 CREATE INDEX IF NOT EXISTS idx_user_details_user_id ON user_details(user_id);
 
--- 2) events: promo or system events
+
 CREATE TABLE IF NOT EXISTS events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   title text NOT NULL,
@@ -115,13 +106,13 @@ CREATE TABLE IF NOT EXISTS events (
 
 CREATE INDEX IF NOT EXISTS idx_events_start_time ON events(start_time);
 
--- 3) notifications: messages for users (in-app / email / push)
+
 CREATE TABLE IF NOT EXISTS notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES users(id) ON DELETE CASCADE,
   title text NOT NULL,
   body text,
-  channel text DEFAULT 'in-app', -- e.g. 'in-app', 'email', 'push', 'sms'
+  channel text DEFAULT 'in-app', 
   is_read boolean DEFAULT false,
   sent_at timestamptz,
   created_at timestamptz DEFAULT now(),
@@ -130,7 +121,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 
 CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
 
--- 4) shortlist: user's saved flights / wishlist
+
 CREATE TABLE IF NOT EXISTS shortlist (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES users(id) ON DELETE CASCADE,

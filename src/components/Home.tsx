@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Search,
   MapPin,
@@ -14,14 +14,13 @@ import {
   Globe,
   ChevronRight,
   ArrowRight,
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
-import { useBooking } from '../contexts/BookingContext';
-import { supabase } from '../lib/supabase';
-import { SearchFilters } from '../types';
-import Footer from '../components/Footer';
-
+} from "lucide-react";
+import { motion } from "framer-motion";
+import { useAuth } from "../contexts/AuthContext";
+import { useBooking } from "../contexts/BookingContext";
+import { supabase } from "../lib/supabase";
+import { SearchFilters } from "../types";
+import Footer from "../components/Footer";
 
 const fadeUp = {
   hidden: { opacity: 0, y: 28 },
@@ -44,138 +43,146 @@ const staggerContainer = {
 const featureCards = [
   {
     icon: Plane,
-    title: 'Modern Fleet',
+    title: "Modern Fleet",
     description:
-      'Fly with confidence in our state-of-the-art aircraft equipped with the latest technology and safety features.',
-    iconBg: 'from-sky-100 to-blue-200',
-    iconColor: 'text-sky-700',
+      "Fly with confidence in our state-of-the-art aircraft equipped with the latest technology and safety features.",
+    iconBg: "from-sky-100 to-blue-200",
+    iconColor: "text-sky-700",
   },
   {
     icon: Star,
-    title: '5-Star Service',
+    title: "5-Star Service",
     description:
-      'Our dedicated crew ensures your journey is comfortable, memorable, and exceeds your expectations.',
-    iconBg: 'from-amber-100 to-yellow-200',
-    iconColor: 'text-amber-700',
+      "Our dedicated crew ensures your journey is comfortable, memorable, and exceeds your expectations.",
+    iconBg: "from-amber-100 to-yellow-200",
+    iconColor: "text-amber-700",
   },
   {
     icon: Globe,
-    title: 'Global Network',
+    title: "Global Network",
     description:
-      'Connect to destinations worldwide with our extensive route network spanning across continents.',
-    iconBg: 'from-purple-100 to-fuchsia-200',
-    iconColor: 'text-purple-700',
+      "Connect to destinations worldwide with our extensive route network spanning across continents.",
+    iconBg: "from-purple-100 to-fuchsia-200",
+    iconColor: "text-purple-700",
   },
 ];
 
 const trustItems = [
-  { icon: Shield, label: 'Safe & Secure' },
-  { icon: Star, label: '5-Star Service' },
-  { icon: Clock, label: '24/7 Support' },
+  { icon: Shield, label: "Safe & Secure" },
+  { icon: Star, label: "5-Star Service" },
+  { icon: Clock, label: "24/7 Support" },
 ];
 
 const visitedPlaces = [
   {
-    title: 'Dubai',
-    country: 'UAE',
+    title: "Dubai",
+    country: "UAE",
     image:
-      'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80',
-    description: 'Luxury skyline, desert adventure, shopping, and global transit hub.',
-    tag: 'Mostly Visited',
+      "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "Luxury skyline, desert adventure, shopping, and global transit hub.",
+    tag: "Mostly Visited",
   },
   {
-    title: 'Singapore',
-    country: 'Singapore',
+    title: "Singapore",
+    country: "Singapore",
     image:
-      'https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=1200&q=80',
-    description: 'Clean city, futuristic gardens, food culture, and premium travel experience.',
-    tag: 'Popular Route',
+      "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "Clean city, futuristic gardens, food culture, and premium travel experience.",
+    tag: "Popular Route",
   },
   {
-    title: 'Paris',
-    country: 'France',
+    title: "Paris",
+    country: "France",
     image:
-      'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80',
-    description: 'Romantic city breaks, iconic landmarks, art, fashion, and culture.',
-    tag: 'Top Destination',
+      "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "Romantic city breaks, iconic landmarks, art, fashion, and culture.",
+    tag: "Top Destination",
   },
   {
-    title: 'Tokyo',
-    country: 'Japan',
+    title: "Tokyo",
+    country: "Japan",
     image:
-      'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80',
-    description: 'Modern technology, traditional culture, nightlife, and world-class transit.',
-    tag: 'Trending',
+      "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?auto=format&fit=crop&w=1200&q=80",
+    description:
+      "Modern technology, traditional culture, nightlife, and world-class transit.",
+    tag: "Trending",
   },
 ];
 
 const topITCompanies = [
   {
-    name: 'Google',
-    country: 'United States',
-    focus: 'Search, AI, Cloud',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg',
-    wikipedia: 'https://en.wikipedia.org/wiki/Google',
+    name: "Google",
+    country: "United States",
+    focus: "Search, AI, Cloud",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg",
+    wikipedia: "https://en.wikipedia.org/wiki/Google",
   },
   {
-    name: 'Microsoft',
-    country: 'United States',
-    focus: 'Cloud, Software, AI',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg',
-    wikipedia: 'https://en.wikipedia.org/wiki/Microsoft',
+    name: "Microsoft",
+    country: "United States",
+    focus: "Cloud, Software, AI",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg",
+    wikipedia: "https://en.wikipedia.org/wiki/Microsoft",
   },
   {
-    name: 'Meta',
-    country: 'United States',
-    focus: 'Social Media, VR, AI',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/a/ab/Meta-Logo.png',
-    wikipedia: 'https://en.wikipedia.org/wiki/Meta_(company)',
+    name: "Meta",
+    country: "United States",
+    focus: "Social Media, VR, AI",
+    image: "https://upload.wikimedia.org/wikipedia/commons/a/ab/Meta-Logo.png",
+    wikipedia: "https://en.wikipedia.org/wiki/Meta_(company)",
   },
   {
-    name: 'SpaceX',
-    country: 'United States',
-    focus: 'Space Technology, Aerospace',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/d/de/SpaceX-Logo.svg',
-    wikipedia: 'https://en.wikipedia.org/wiki/SpaceX',
+    name: "SpaceX",
+    country: "United States",
+    focus: "Space Technology, Aerospace",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/d/de/SpaceX-Logo.svg",
+    wikipedia: "https://en.wikipedia.org/wiki/SpaceX",
   },
   {
-    name: 'SAP',
-    country: 'Germany',
-    focus: 'Enterprise Software',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg',
-    wikipedia: 'https://en.wikipedia.org/wiki/SAP',
+    name: "SAP",
+    country: "Germany",
+    focus: "Enterprise Software",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/5/59/SAP_2011_logo.svg",
+    wikipedia: "https://en.wikipedia.org/wiki/SAP",
   },
   {
-    name: 'Infosys',
-    country: 'India',
-    focus: 'IT Services, Consulting',
-    image: 'https://upload.wikimedia.org/wikipedia/commons/9/95/Infosys_logo.svg',
-    wikipedia: 'https://en.wikipedia.org/wiki/Infosys',
+    name: "Infosys",
+    country: "India",
+    focus: "IT Services, Consulting",
+    image:
+      "https://upload.wikimedia.org/wikipedia/commons/9/95/Infosys_logo.svg",
+    wikipedia: "https://en.wikipedia.org/wiki/Infosys",
   },
 ];
 
 type RecommendedFlight = {
-  id: string
-  from_location: string
-  to_location: string
-  price: number
-  score: number
-}
+  id: string;
+  from_location: string;
+  to_location: string;
+  price: number;
+  score: number;
+};
 const Home: React.FC = () => {
   const [searchData, setSearchData] = useState({
-    from: '',
-    to: '',
-    departureDate: '',
-    returnDate: '',
+    from: "",
+    to: "",
+    departureDate: "",
+    returnDate: "",
     passengers: 1,
-    class: 'Economy' as 'Economy' | 'Business' | 'First',
-    tripType: 'one-way' as 'one-way' | 'round-trip',
-    // flightType: 'Domestic' as 'Domestic' | 'International',
+    class: "Economy" as "Economy" | "Business" | "First",
+    tripType: "one-way" as "one-way" | "round-trip",
+    flightType: "Domestic" as "Domestic" | "International",
   });
 
-  // New Flight Search system
-  const [fromQuery, setFromQuery] = useState('');
-  const [toQuery, setToQuery] = useState('');
+  const [fromQuery, setFromQuery] = useState("");
+  const [toQuery, setToQuery] = useState("");
   const [showFromSuggestions, setShowFromSuggestions] = useState(false);
   const [showToSuggestions, setShowToSuggestions] = useState(false);
 
@@ -184,15 +191,14 @@ const Home: React.FC = () => {
       setShowFromSuggestions(false);
       setShowToSuggestions(false);
     };
-    window.addEventListener('click', handleClickOutside);
-    return () => window.removeEventListener('click', handleClickOutside);
+    window.addEventListener("click", handleClickOutside);
+    return () => window.removeEventListener("click", handleClickOutside);
   }, []);
-
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const [cities, setCities] = useState<string[]>([]);
-  const [filteredCities, setFilteredCities] = useState<string[]>([])
+  const [filteredCities, setFilteredCities] = useState<string[]>([]);
 
   const { user } = useAuth();
   const { setSearchFilters } = useBooking();
@@ -200,58 +206,61 @@ const Home: React.FC = () => {
 
   const staticRecommendations = [
     {
-      id: 'rec-1',
-      from_location: 'Kathmandu',
-      to_location: 'Pokhara',
+      id: "rec-1",
+      from_location: "Kathmandu",
+      to_location: "Pokhara",
       price: 45,
-      discount: '15% Off',
+      discount: "15% Off",
       // Updated reliable Pokhara link
-      image: 'https://tse3.mm.bing.net/th/id/OIP.Rc8LeQqbEgenlTZTmkH3bAHaDj?rs=1&pid=ImgDetMain&o=7&rm=3',
-      tags: ['Best Seller', 'Domestic']
+      image:
+        "https://tse3.mm.bing.net/th/id/OIP.Rc8LeQqbEgenlTZTmkH3bAHaDj?rs=1&pid=ImgDetMain&o=7&rm=3",
+      tags: ["Best Seller", "Domestic"],
     },
     {
-      id: 'rec-2',
-      from_location: 'Kathmandu',
-      to_location: 'Dubai',
+      id: "rec-2",
+      from_location: "Kathmandu",
+      to_location: "Dubai",
       price: 320,
-      discount: 'Early Bird',
-      image: 'https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=400',
-      tags: ['International', 'Popular']
+      discount: "Early Bird",
+      image:
+        "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=400",
+      tags: ["International", "Popular"],
     },
     {
-      id: 'rec-3',
-      from_location: 'Kathmandu',
-      to_location: 'London',
+      id: "rec-3",
+      from_location: "Kathmandu",
+      to_location: "London",
       price: 850,
-      discount: 'Limited Deal',
-      image: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=400',
-      tags: ['Dream Trip']
-    }
+      discount: "Limited Deal",
+      image:
+        "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=400",
+      tags: ["Dream Trip"],
+    },
   ];
 
-
-  // For recommendations 
-  const [recommendations, setRecommendations] = useState<RecommendedFlight[]>([])
+  // For recommendations
+  const [recommendations, setRecommendations] = useState<RecommendedFlight[]>(
+    [],
+  );
 
   useEffect(() => {
     const fetchRecommendations = async () => {
-      if (!user) return
+      if (!user) return;
 
       try {
         const res = await fetch(
-          `http://localhost:4000/recommendations?userId=${user.id}`
-        )
+          `http://localhost:4000/recommendations?userId=${user.id}`,
+        );
 
         const data: RecommendedFlight[] = await res.json();
         setRecommendations(data);
       } catch (err) {
-        console.log(err)
+        console.log(err);
       }
     };
 
-    fetchRecommendations()
-  }, [user])
-
+    fetchRecommendations();
+  }, [user]);
 
   // Load cities based on flight type
 
@@ -265,49 +274,49 @@ const Home: React.FC = () => {
 
   const loadCities = async () => {
     const { data, error } = await supabase
-      .from('flights')
-      .select('from_location, to_location')
+      .from("flights")
+      .select("from_location, to_location");
 
     if (error) {
-      console.log(error)
-      return
+      console.log(error);
+      return;
     }
 
-    const citySet = new Set<string>()
+    const citySet = new Set<string>();
 
     data?.forEach((flight: any) => {
-      if (flight.from_location) citySet.add(flight.from_location)
-      if (flight.to_location) citySet.add(flight.to_location)
-    })
+      if (flight.from_location) citySet.add(flight.from_location);
+      if (flight.to_location) citySet.add(flight.to_location);
+    });
 
-    setCities(Array.from(citySet))
-  }
+    setCities(Array.from(citySet));
+  };
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setSearchData((prev) => ({
       ...prev,
-      [name]: name === 'passengers' ? Number(value) : value,
+      [name]: name === "passengers" ? Number(value) : value,
     }));
 
     if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
+      setErrors((prev) => ({ ...prev, [name]: "" }));
     }
   };
 
   const validateSearch = () => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!searchData.from) newErrors.from = 'Departure city is required';
-    if (!searchData.to) newErrors.to = 'Destination city is required';
+    if (!searchData.from) newErrors.from = "Departure city is required";
+    if (!searchData.to) newErrors.to = "Destination city is required";
     if (!searchData.departureDate)
-      newErrors.departureDate = 'Departure date is required';
-    if (searchData.tripType === 'round-trip' && !searchData.returnDate) {
-      newErrors.returnDate = 'Return date is required for round trip';
+      newErrors.departureDate = "Departure date is required";
+    if (searchData.tripType === "round-trip" && !searchData.returnDate) {
+      newErrors.returnDate = "Return date is required for round trip";
     }
     if (searchData.from === searchData.to) {
-      newErrors.to = 'Destination must be different from departure';
+      newErrors.to = "Destination must be different from departure";
     }
 
     setErrors(newErrors);
@@ -324,37 +333,35 @@ const Home: React.FC = () => {
       to: searchData.to,
       departureDate: searchData.departureDate,
       returnDate:
-        searchData.tripType === 'round-trip'
+        searchData.tripType === "round-trip"
           ? searchData.returnDate
           : undefined,
       passengers: Number(searchData.passengers),
       class: searchData.class,
       tripType: searchData.tripType,
-
     };
 
     setSearchFilters(filters);
 
     if (!user) {
-      sessionStorage.setItem('pendingSearch', JSON.stringify(filters));
-      navigate('/login');
+      sessionStorage.setItem("pendingSearch", JSON.stringify(filters));
+      navigate("/login");
     } else {
-      navigate('/booking');
+      navigate("/booking");
     }
   };
 
   const swapCities = () => {
     setSearchData((prev) => ({
       ...prev,
-      from: prev.to || '',
-      to: prev.from || '',
+      from: prev.to || "",
+      to: prev.from || "",
     }));
   };
 
   return (
     <div className="min-h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 text-gray-900">
       <section className="relative isolate -mt-6">
-
         <div className="absolute inset-0 bg-gradient-to-r from-slate-950 via-blue-950 to-indigo-950" />
         <div className="absolute inset-0 opacity-25 bg-[radial-gradient(circle_at_top_left,_white_0,_transparent_35%),radial-gradient(circle_at_bottom_right,_#60a5fa_0,_transparent_30%)]" />
         {/* Background Video */}
@@ -372,12 +379,12 @@ const Home: React.FC = () => {
         <motion.div
           className="absolute -top-24 left-10 h-72 w-72 rounded-full bg-blue-400/10 blur-3xl"
           animate={{ y: [0, 16, 0], x: [0, 10, 0] }}
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
         />
         <motion.div
           className="absolute right-0 top-20 h-96 w-96 rounded-full bg-fuchsia-400/10 blur-3xl"
           animate={{ y: [0, -18, 0], x: [0, -14, 0] }}
-          transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+          transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
         />
 
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 pb-32 pt-16 sm:px-6 lg:grid-cols-2 lg:px-8 lg:pb-40 lg:pt-24">
@@ -396,10 +403,13 @@ const Home: React.FC = () => {
             </motion.div>
 
             <div className="relative h-40 overflow-hidden sm:h-44 md:h-48">
-
               <motion.div
-                animate={{ y: ['0%', '-33.33%', '-66.66%', '0%'] }}
-                transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
+                animate={{ y: ["0%", "-33.33%", "-66.66%", "0%"] }}
+                transition={{
+                  duration: 10,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
                 className="space-y-2"
               >
                 <h1 className="text-4xl font-extrabold leading-tight text-white sm:text-5xl lg:text-6xl xl:text-7xl">
@@ -423,10 +433,7 @@ const Home: React.FC = () => {
               changing your existing booking and backend workflow.
             </motion.p>
 
-            <motion.div
-              variants={fadeUp}
-              className="mt-8 flex flex-wrap gap-3"
-            >
+            <motion.div variants={fadeUp} className="mt-8 flex flex-wrap gap-3">
               {trustItems.map((item) => {
                 const Icon = item.icon;
                 return (
@@ -448,7 +455,6 @@ const Home: React.FC = () => {
             transition={{ duration: 0.7, delay: 0.15 }}
             className="relative"
           >
-
             {/* Search Form Container */}
             <div className="absolute -inset-2 rounded-[2rem] bg-gradient-to-r from-sky-400/30 via-indigo-400/20 to-fuchsia-400/30 blur-2xl" />
             <section className="relative z-20 mt-4 px-4 sm:px-6 lg:px-2 lg:-mt-8">
@@ -462,7 +468,8 @@ const Home: React.FC = () => {
                           Search Flights
                         </h2>
                         <p className="mt-1 text-sm text-slate-600 md:text-base">
-                          Find the perfect flight for your next journey with NepSky
+                          Find the perfect flight for your next journey with
+                          NepSky
                         </p>
                       </div>
 
@@ -483,16 +490,17 @@ const Home: React.FC = () => {
                           type="radio"
                           name="tripType"
                           value="one-way"
-                          checked={searchData.tripType === 'one-way'}
+                          checked={searchData.tripType === "one-way"}
                           onChange={handleInputChange}
                           className="sr-only"
                         />
                         <div
                           className={`flex min-w-[150px] items-center justify-center gap-2 rounded-full 
                             border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base 
-                            ${searchData.tripType === 'one-way'
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50'
+                            ${
+                              searchData.tripType === "one-way"
+                                ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md"
+                                : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50"
                             }`}
                         >
                           <ArrowRight className="h-4 w-4" />
@@ -506,17 +514,19 @@ const Home: React.FC = () => {
                           type="radio"
                           name="tripType"
                           value="round-trip"
-                          checked={searchData.tripType === 'round-trip'}
+                          checked={searchData.tripType === "round-trip"}
                           onChange={handleInputChange}
                           className="sr-only"
                         />
                         <div
                           className={`flex min-w-[160px] items-center justify-center gap-2 rounded-full
                              border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base 
-                             ${searchData.tripType === 'round-trip'
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50'
-                            }`}>
+                             ${
+                               searchData.tripType === "round-trip"
+                                 ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md"
+                                 : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50"
+                             }`}
+                        >
                           <ArrowRightLeft className="h-4 w-4" />
                           <span className="whitespace-nowrap">Round Trip</span>
                         </div>
@@ -581,7 +591,10 @@ const Home: React.FC = () => {
                             value={searchData.from || fromQuery}
                             onChange={(e) => {
                               setFromQuery(e.target.value);
-                              setSearchData(prev => ({ ...prev, from: e.target.value }));
+                              setSearchData((prev) => ({
+                                ...prev,
+                                from: e.target.value,
+                              }));
                               setShowFromSuggestions(true);
                             }}
                             onFocus={() => setShowFromSuggestions(true)}
@@ -592,22 +605,35 @@ const Home: React.FC = () => {
                         {/* Suggestions Dropdown */}
                         {showFromSuggestions && fromQuery && (
                           <div className="absolute z-50 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-2xl backdrop-blur-lg">
-                            {cities.filter(city => city.toLowerCase().includes(fromQuery.toLowerCase())).map((city) => (
-                              <div
-                                key={city}
-                                className="cursor-pointer px-4 py-3 hover:bg-blue-50 text-slate-700 font-medium transition-colors"
-                                onClick={() => {
-                                  setSearchData(prev => ({ ...prev, from: city }));
-                                  setFromQuery(city);
-                                  setShowFromSuggestions(false);
-                                }}
-                              >
-                                {city}
-                              </div>
-                            ))}
+                            {cities
+                              .filter((city) =>
+                                city
+                                  .toLowerCase()
+                                  .includes(fromQuery.toLowerCase()),
+                              )
+                              .map((city) => (
+                                <div
+                                  key={city}
+                                  className="cursor-pointer px-4 py-3 hover:bg-blue-50 text-slate-700 font-medium transition-colors"
+                                  onClick={() => {
+                                    setSearchData((prev) => ({
+                                      ...prev,
+                                      from: city,
+                                    }));
+                                    setFromQuery(city);
+                                    setShowFromSuggestions(false);
+                                  }}
+                                >
+                                  {city}
+                                </div>
+                              ))}
                           </div>
                         )}
-                        {errors.from && <p className="mt-2 text-sm text-red-600">{errors.from}</p>}
+                        {errors.from && (
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.from}
+                          </p>
+                        )}
                       </div>
 
                       {/* Swap */}
@@ -622,7 +648,10 @@ const Home: React.FC = () => {
                       </div>
 
                       {/* Destination Search */}
-                      <div className="xl:col-span-5 relative" onClick={(e) => e.stopPropagation()}>
+                      <div
+                        className="xl:col-span-5 relative"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <div className="group relative rounded-2xl border-2 border-slate-200 bg-white px-4 pb-3 pt-2 transition-all duration-300 hover:border-blue-300 focus-within:border-blue-500 focus-within:shadow-lg focus-within:shadow-blue-100">
                           <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
                             <MapPin className="h-3.5 w-3.5" />
@@ -650,17 +679,26 @@ const Home: React.FC = () => {
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute z-50 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl"
                           >
-                            {cities.filter(city =>
-                              city.toLowerCase().includes(searchData.to.toLowerCase())
+                            {cities.filter((city) =>
+                              city
+                                .toLowerCase()
+                                .includes(searchData.to.toLowerCase()),
                             ).length > 0 ? (
                               cities
-                                .filter(city => city.toLowerCase().includes(searchData.to.toLowerCase()))
+                                .filter((city) =>
+                                  city
+                                    .toLowerCase()
+                                    .includes(searchData.to.toLowerCase()),
+                                )
                                 .map((city) => (
                                   <div
                                     key={city}
                                     className="flex items-center gap-3 cursor-pointer px-4 py-3 hover:bg-blue-50 text-slate-700 transition-colors border-b border-slate-50 last:border-none"
                                     onClick={() => {
-                                      setSearchData(prev => ({ ...prev, to: city }));
+                                      setSearchData((prev) => ({
+                                        ...prev,
+                                        to: city,
+                                      }));
                                       setShowToSuggestions(false);
                                     }}
                                   >
@@ -676,7 +714,9 @@ const Home: React.FC = () => {
                           </motion.div>
                         )}
                         {errors.to && (
-                          <p className="mt-2 text-sm text-red-600">{errors.to}</p>
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.to}
+                          </p>
                         )}
                       </div>
 
@@ -693,19 +733,29 @@ const Home: React.FC = () => {
                             value={searchData.departureDate}
                             onChange={handleInputChange}
                             /* Reliable constraint: Cannot book in the past */
-                            min={new Date().toISOString().split('T')[0]}
+                            min={new Date().toISOString().split("T")[0]}
                             /* Professional constraint: Cannot book more than 1 year (365 days) in the future */
-                            max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
+                            max={
+                              new Date(
+                                new Date().setFullYear(
+                                  new Date().getFullYear() + 1,
+                                ),
+                              )
+                                .toISOString()
+                                .split("T")[0]
+                            }
                             className="w-full bg-transparent text-base font-medium text-slate-900 outline-none md:text-lg"
                           />
                         </div>
                         {errors.departureDate && (
-                          <p className="mt-2 text-sm text-red-600">{errors.departureDate}</p>
+                          <p className="mt-2 text-sm text-red-600">
+                            {errors.departureDate}
+                          </p>
                         )}
                       </div>
 
                       {/* Return Date */}
-                      {searchData.tripType === 'round-trip' && (
+                      {searchData.tripType === "round-trip" && (
                         <div className="xl:col-span-6">
                           <div className="group relative rounded-2xl border-2 border-slate-200 bg-white px-4 pb-3 pt-2 transition-all duration-300 hover:border-blue-300 focus-within:border-blue-500 focus-within:shadow-lg focus-within:shadow-blue-100">
                             <div className="mb-1 flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
@@ -718,14 +768,27 @@ const Home: React.FC = () => {
                               value={searchData.returnDate}
                               onChange={handleInputChange}
                               /* Reliable constraint: Cannot return before the departure date (or today) */
-                              min={searchData.departureDate || new Date().toISOString().split('T')[0]}
+                              min={
+                                searchData.departureDate ||
+                                new Date().toISOString().split("T")[0]
+                              }
                               /* Industry constraint: Maximum 1 year in the future */
-                              max={new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString().split('T')[0]}
+                              max={
+                                new Date(
+                                  new Date().setFullYear(
+                                    new Date().getFullYear() + 1,
+                                  ),
+                                )
+                                  .toISOString()
+                                  .split("T")[0]
+                              }
                               className="w-full bg-transparent text-base font-medium text-slate-900 outline-none md:text-lg"
                             />
                           </div>
                           {errors.returnDate && (
-                            <p className="mt-2 text-sm text-red-600">{errors.returnDate}</p>
+                            <p className="mt-2 text-sm text-red-600">
+                              {errors.returnDate}
+                            </p>
                           )}
                         </div>
                       )}
@@ -748,7 +811,7 @@ const Home: React.FC = () => {
                           >
                             {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                               <option key={num} value={num}>
-                                {num} {num === 1 ? 'Passenger' : 'Passengers'}
+                                {num} {num === 1 ? "Passenger" : "Passengers"}
                               </option>
                             ))}
                           </select>
@@ -786,7 +849,9 @@ const Home: React.FC = () => {
                           className="group flex h-[50px] w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 px-8 text-base font-semibold text-white shadow-lg shadow-blue-500/20 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl hover:shadow-indigo-500/30 md:text-lg"
                         >
                           <Search className="h-5 w-5 shrink-0 transition-transform duration-300 group-hover:scale-110" />
-                          <span className="whitespace-nowrap">Search Flights</span>
+                          <span className="whitespace-nowrap">
+                            Search Flights
+                          </span>
                           <span className="shrink-0 transition-transform duration-300 group-hover:translate-x-1">
                             →
                           </span>
@@ -867,7 +932,8 @@ const Home: React.FC = () => {
               Mostly Visited Places
             </h2>
             <p className="mx-auto mt-4 max-w-3xl text-lg leading-8 text-slate-600">
-              Explore some of the most loved travel destinations chosen by travelers around the world.
+              Explore some of the most loved travel destinations chosen by
+              travelers around the world.
             </p>
           </motion.div>
 
@@ -894,11 +960,15 @@ const Home: React.FC = () => {
                   </div>
                   <div className="absolute bottom-0 left-0 right-0 p-5 text-white">
                     <h3 className="text-2xl font-bold">{place.title}</h3>
-                    <p className="mt-1 text-sm text-white/85">{place.country}</p>
+                    <p className="mt-1 text-sm text-white/85">
+                      {place.country}
+                    </p>
                   </div>
                 </div>
                 <div className="p-5">
-                  <p className="text-sm leading-7 text-slate-600">{place.description}</p>
+                  <p className="text-sm leading-7 text-slate-600">
+                    {place.description}
+                  </p>
                   <div className="mt-4 flex items-center gap-2 text-sm font-semibold text-blue-700">
                     <span>Explore destination</span>
                     <ChevronRight className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
@@ -911,19 +981,17 @@ const Home: React.FC = () => {
       </section>
 
       {/* //Recommendations section */}
-      {/* <section className="pb-20">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-
+      <section className="pb-0">
+        <div className="mx-auto max-w-7xl px-2 sm:px-6 lg:px-8">
           <h2 className="text-3xl font-bold text-center text-slate-900">
             Recommended Flights
           </h2>
 
           <p className="text-center text-slate-600 mt-3 mb-10">
-
+            Hand-picked deals based on current travel trends
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-
             {recommendations.map((f) => (
               <div
                 key={f.id}
@@ -946,17 +1014,14 @@ const Home: React.FC = () => {
                 </button>
               </div>
             ))}
-
           </div>
         </div>
-      </section> */}
+      </section>
 
-      <section className="py-20 bg-slate-50/50">
+      <section className="py-0 mb-20 bg-slate-50/50">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-12 flex items-end justify-between">
             <div>
-              <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Recommended for You</h2>
-              <p className="mt-2 text-slate-600">Hand-picked deals based on current travel trends</p>
             </div>
             <div className="hidden sm:block">
               <button className="text-sm font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1">
@@ -981,14 +1046,19 @@ const Home: React.FC = () => {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <div className="absolute top-4 left-4 flex gap-2">
-                    {flight.tags.map(tag => (
-                      <span key={tag} className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md">
+                    {flight.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-white/20 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-md"
+                      >
                         {tag}
                       </span>
                     ))}
                   </div>
                   <div className="absolute bottom-4 left-4 text-white">
-                    <p className="text-sm font-medium opacity-80">Starting from</p>
+                    <p className="text-sm font-medium opacity-80">
+                      Starting from
+                    </p>
                     <p className="text-2xl font-bold">${flight.price}</p>
                   </div>
                 </div>
@@ -998,24 +1068,36 @@ const Home: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className="text-left">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">From</p>
-                        <p className="text-lg font-bold text-slate-900">{flight.from_location}</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                          From
+                        </p>
+                        <p className="text-lg font-bold text-slate-900">
+                          {flight.from_location}
+                        </p>
                       </div>
                       <ArrowRight className="h-4 w-4 text-blue-500" />
                       <div className="text-left">
-                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">To</p>
-                        <p className="text-lg font-bold text-slate-900">{flight.to_location}</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+                          To
+                        </p>
+                        <p className="text-lg font-bold text-slate-900">
+                          {flight.to_location}
+                        </p>
                       </div>
                     </div>
 
                     <div className="rounded-xl bg-blue-50 px-3 py-2 text-center">
-                      <p className="text-[10px] font-bold text-blue-600 uppercase leading-none">Save</p>
-                      <p className="text-sm font-black text-blue-700">{flight.discount}</p>
+                      <p className="text-[10px] font-bold text-blue-600 uppercase leading-none">
+                        Save
+                      </p>
+                      <p className="text-sm font-black text-blue-700">
+                        {flight.discount}
+                      </p>
                     </div>
                   </div>
 
                   <button
-                    onClick={() => navigate('/booking')}
+                    onClick={() => navigate("/booking")}
                     className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-4 text-sm font-bold text-white transition-all hover:bg-blue-600 active:scale-95"
                   >
                     Book This Flight
@@ -1028,8 +1110,8 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-      <section className="pb-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+      <section className="pb-2">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 ">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -1059,7 +1141,6 @@ const Home: React.FC = () => {
                 whileHover={{ y: -8, scale: 1.02 }}
                 className="group relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-lg transition-all duration-300 hover:shadow-2xl"
               >
-
                 {/* Background glow */}
                 <div className="absolute right-0 top-0 h-28 w-28 bg-blue-200/30 blur-2xl group-hover:bg-indigo-300/40 transition-all duration-300" />
 
@@ -1077,9 +1158,7 @@ const Home: React.FC = () => {
                     <h3 className="text-xl font-bold text-slate-900">
                       {company.name}
                     </h3>
-                    <p className="text-sm text-slate-500">
-                      {company.country}
-                    </p>
+                    <p className="text-sm text-slate-500">{company.country}</p>
                   </div>
                 </div>
 
@@ -1093,7 +1172,9 @@ const Home: React.FC = () => {
 
                 {/* Hover Button */}
                 <div className="mt-5 flex justify-between items-center">
-                  <span className="text-sm text-slate-500">Global Tech Leader</span>
+                  <span className="text-sm text-slate-500">
+                    Global Tech Leader
+                  </span>
                   <a
                     href={company.wikipedia}
                     target="_blank"
@@ -1112,6 +1193,5 @@ const Home: React.FC = () => {
     </div>
   );
 };
-
 
 export default Home;
