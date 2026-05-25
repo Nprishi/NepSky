@@ -40,29 +40,8 @@ const Header: React.FC = () => {
   const [locationName, setLocationName] = useState("Detecting location...");
   const [isLocating, setIsLocating] = useState(true);
 
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 1,
-      title: "Booking Update",
-      message: "Your Kathmandu to Dubai flight is confirmed.",
-      time: "2 min ago",
-      read: false,
-    },
-    {
-      id: 2,
-      title: "Check-in Reminder",
-      message: "Online check-in opens 24 hours before departure.",
-      time: "1 hour ago",
-      read: false,
-    },
-    {
-      id: 3,
-      title: "Special Offer",
-      message: "Get discounted fares on selected international routes.",
-      time: "Today",
-      read: true,
-    },
-  ]);
+  // Start with empty notifications; we'll add items only for explicit user actions
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -131,7 +110,6 @@ const Header: React.FC = () => {
       }
 
       if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
-        // only close mobile menu when it is open and clicked outside
         if (isMenuOpen) {
           setIsMenuOpen(false);
         }
@@ -142,33 +120,91 @@ const Header: React.FC = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isMenuOpen]);
 
+  // Add notifications created by other components via sessionStorage flags
   useEffect(() => {
-    if (user) {
-      const currentTime = new Date().toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+    // login notification: set by Login component when a user explicitly signs in
+    const showLogin = sessionStorage.getItem('showLoginNotification');
+    if (showLogin) {
+      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
       const getDeviceName = () => {
         const ua = navigator.userAgent;
-        if (ua.includes("Win")) return "Windows PC";
-        if (ua.includes("Mac")) return "Macintosh";
-        if (ua.includes("Linux")) return "Linux Device";
-        if (ua.includes("Android")) return "Android Phone";
-        if (ua.includes("iPhone")) return "iPhone";
-        return "Unknown Device";
+        if (ua.includes('Win')) return 'Windows PC';
+        if (ua.includes('Mac')) return 'Macintosh';
+        if (ua.includes('Linux')) return 'Linux Device';
+        if (ua.includes('Android')) return 'Android Phone';
+        if (ua.includes('iPhone')) return 'iPhone';
+        return 'Unknown Device';
       };
 
       const loginNotification: NotificationItem = {
-        id: Date.now(), // Unique ID
-        title: "New Login Detected",
-        message: `User Login: ${currentTime} on ${getDeviceName()}`,
-        time: "Just now",
+        id: Date.now(),
+        title: 'Signed In',
+        message: `Signed in at ${currentTime} on ${getDeviceName()}`,
+        time: 'Just now',
         read: false,
       };
 
       setNotifications((prev) => [loginNotification, ...prev]);
+      sessionStorage.removeItem('showLoginNotification');
     }
+
+    // booking completion notification: set by PaymentForm when booking is created
+    const bookingCompleted = sessionStorage.getItem('bookingCompleted');
+    if (bookingCompleted) {
+      try {
+        const data = JSON.parse(bookingCompleted);
+        const bookingNotification: NotificationItem = {
+          id: Date.now(),
+          title: 'Booking Confirmed',
+          message: `Booking ${data.pnr || data.bookingId} confirmed — ${data.amount ? '$' + data.amount : ''}`,
+          time: 'Just now',
+          read: false,
+        };
+
+        setNotifications((prev) => [bookingNotification, ...prev]);
+      } catch (err) {
+        console.error('Invalid bookingCompleted payload', err);
+      } finally {
+        sessionStorage.removeItem('bookingCompleted');
+      }
+    }
+
+    // Listen for immediate events dispatched by other components
+    const onSignedIn = (e: any) => {
+      const email = e?.detail?.email || '';
+      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const device = navigator.userAgent.includes('Win') ? 'Windows' : 'Device';
+      const loginNotification: NotificationItem = {
+        id: Date.now(),
+        title: 'Signed In',
+        message: `Signed in at ${currentTime} (${email}) on ${device}`,
+        time: 'Just now',
+        read: false,
+      };
+
+      setNotifications((prev) => [loginNotification, ...prev]);
+    };
+
+    const onBookingCompleted = (e: any) => {
+      const d = e?.detail || {};
+      const bookingNotification: NotificationItem = {
+        id: Date.now(),
+        title: 'Booking Confirmed',
+        message: `Booking ${d.pnr || d.bookingId} confirmed — ${d.amount ? '$' + d.amount : ''}`,
+        time: 'Just now',
+        read: false,
+      };
+      setNotifications((prev) => [bookingNotification, ...prev]);
+    };
+
+    window.addEventListener('app:signedIn', onSignedIn as EventListener);
+    window.addEventListener('app:bookingCompleted', onBookingCompleted as EventListener);
+
+    return () => {
+      window.removeEventListener('app:signedIn', onSignedIn as EventListener);
+      window.removeEventListener('app:bookingCompleted', onBookingCompleted as EventListener);
+    };
   }, [user]);
 
   useEffect(() => {

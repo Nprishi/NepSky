@@ -181,6 +181,10 @@ const Home: React.FC = () => {
     flightType: "Domestic" as "Domestic" | "International",
   });
 
+  useEffect(() => {
+    loadCities();
+  }, [searchData.flightType]);
+
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
   const [showFromSuggestions, setShowFromSuggestions] = useState(false);
@@ -262,15 +266,7 @@ const Home: React.FC = () => {
     fetchRecommendations();
   }, [user]);
 
-  // Load cities based on flight type
 
-  // useEffect(() => {
-  //   loadCities(searchData.flightType);
-  // }, [searchData.flightType]);
-
-  useEffect(() => {
-    loadCities();
-  }, []);
 
   const loadCities = async () => {
     const { data, error } = await supabase
@@ -339,16 +335,15 @@ const Home: React.FC = () => {
       passengers: Number(searchData.passengers),
       class: searchData.class,
       tripType: searchData.tripType,
+      flightType: searchData.flightType,
     };
 
     setSearchFilters(filters);
 
-    if (!user) {
-      sessionStorage.setItem("pendingSearch", JSON.stringify(filters));
-      navigate("/login");
-    } else {
-      navigate("/booking");
-    }
+ 
+    sessionStorage.setItem("pendingSearch", JSON.stringify(filters));
+ 
+    navigate("/booking");
   };
 
   const swapCities = () => {
@@ -534,7 +529,7 @@ const Home: React.FC = () => {
                     </div>
 
                     {/* Flight Type */}
-                    {/* <div className="mb-6 flex flex-wrap gap-4">
+                    {/* { <div className="mb-6 flex flex-wrap gap-4">
                       <label className="cursor-pointer">
                         <input
                           type="radio"
@@ -545,8 +540,8 @@ const Home: React.FC = () => {
                           className="sr-only"
                         />
                         <div
-                          className={`flex min-w-[160px] items-center justify-center rounded-full border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base
-      ${searchData.flightType === 'Domestic'
+                          className={`flex min-w-[160px] items-center justify-center rounded-full border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base'}
+${searchData.flightType === 'Domestic'
                               ? 'border-green-600 bg-green-50 text-green-700 shadow-md'
                               : 'border-slate-200 bg-white text-slate-600 hover:border-green-300 hover:bg-slate-50'
                             }`}
@@ -561,20 +556,12 @@ const Home: React.FC = () => {
                           name="flightType"
                           value="International"
                           checked={searchData.flightType === 'International'}
-                          onChange={handleInputChange}
-                          className="sr-only"
-                        />
+                          onChange={handleInputChange} className="sr-only"/>
                         <div
-                          className={`flex min-w-[160px] items-center justify-center rounded-full border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base
-      ${searchData.flightType === 'International'
-                              ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md'
-                              : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50'
-                            }`}
-                        >
-                          International
+                          className={`flex min-w-[160px] items-center justify-center rounded-full border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base ${searchData.flightType === 'International' ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-md' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50'}`}>International
                         </div>
                       </label>
-                    </div> */}
+                    </div> } */}
 
                     {/* Top row */}
                     <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">

@@ -297,6 +297,13 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ onNext, onBack }) => {
       }
 
       setIsProcessing(false);
+      // notify header about completed booking
+      try {
+        sessionStorage.setItem('bookingCompleted', JSON.stringify({ bookingId: booking.id, pnr: booking.pnr, amount: booking.totalAmount }));
+      } catch (e) {}
+      try {
+        window.dispatchEvent(new CustomEvent('app:bookingCompleted', { detail: { bookingId: booking.id, pnr: booking.pnr, amount: booking.totalAmount } }));
+      } catch (e) {}
       onNext();
     } catch (error) {
       console.error('Payment processing error:', error);
@@ -320,6 +327,14 @@ const PaymentForm: React.FC<PaymentFormProps> = ({ onNext, onBack }) => {
         setErrors({ general: 'Failed to create booking. Please try again.' });
         return;
       }
+
+      try {
+        sessionStorage.setItem('bookingCompleted', JSON.stringify({ bookingId: booking.id, pnr: booking.pnr, amount: booking.totalAmount }));
+      } catch (e) {}
+
+      try {
+        window.dispatchEvent(new CustomEvent('app:bookingCompleted', { detail: { bookingId: booking.id, pnr: booking.pnr, amount: booking.totalAmount } }));
+      } catch (e) {}
 
       onNext();
     } catch (error) {

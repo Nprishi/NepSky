@@ -95,7 +95,17 @@ const Login: React.FC = () => {
       const result = await loginWithDetails(formData.email, formData.password);
 
       if (result.success) {
-        navigate('/');
+        // mark that user explicitly signed in so Header can show a notification
+        try { sessionStorage.setItem('showLoginNotification', '1'); } catch (e) {}
+        try { window.dispatchEvent(new CustomEvent('app:signedIn', { detail: { email: formData.email } })); } catch (e) {}
+        // If there was a pending selected flight or search, redirect to booking flow
+        const pendingSelected = sessionStorage.getItem('pendingSelectedFlight');
+        const pendingSearch = sessionStorage.getItem('pendingSearch');
+        if (pendingSelected || pendingSearch) {
+          navigate('/booking');
+        } else {
+          navigate('/');
+        }
         return;
       }
 

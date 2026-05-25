@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   Plane,
   Users,
@@ -9,21 +9,23 @@ import {
   Star,
   MapPin,
   Clock3,
-} from 'lucide-react';
-import { useBooking } from '../contexts/BookingContext';
-import CurrencyDisplay from './CurrencyDisplay';
-import { supabase } from '../lib/supabase';
-import { Flight } from '../types';
+} from "lucide-react";
+import { useBooking } from "../contexts/BookingContext";
+import { useAuth } from "../contexts/AuthContext";
+import { useNavigate } from "react-router-dom";
+import CurrencyDisplay from "./CurrencyDisplay";
+import { supabase } from "../lib/supabase";
+import { Flight } from "../types";
 import {
   calculateHaversineDistance,
   estimateFlightTime,
-} from '../utils/algorithms';
+} from "../utils/algorithms";
 import {
   AirportCoordinate,
   AirportCoordinateMap,
   buildAirportCoordinateMap,
   extractAirportCode,
-} from '../data/airportCoordinates';
+} from "../data/airportCoordinates";
 
 interface FlightListProps {
   onNext: () => void;
@@ -35,6 +37,8 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
   const [airportMap, setAirportMap] = useState<AirportCoordinateMap>({});
   const [loading, setLoading] = useState(true);
   const { searchFilters, setSelectedFlight } = useBooking();
+  const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadFlightsAndAirports = async () => {
@@ -42,70 +46,127 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
 
       try {
         let flightQuery = supabase
-          .from('flights')
-          .select('*')
-          .eq('status', 'scheduled')
-          .gt('available_seats', 0)
-          .order('departure_time', { ascending: true });
+          .from("flights")
+          .select("*")
+          .eq("status", "scheduled")
+          .gt("available_seats", 0)
+          .order("departure_time", { ascending: true });
 
         if (searchFilters) {
           if (searchFilters.from) {
-            flightQuery = flightQuery.ilike('from_location', `%${searchFilters.from}%`);
+            flightQuery = flightQuery.ilike(
+              "from_location",
+              `%${searchFilters.from}%`,
+            );
           }
           if (searchFilters.to) {
-            flightQuery = flightQuery.ilike('to_location', `%${searchFilters.to}%`);
+            flightQuery = flightQuery.ilike(
+              "to_location",
+              `%${searchFilters.to}%`,
+            );
           }
         }
 
         const [flightsResponse, airportsResponse] = await Promise.all([
           flightQuery,
-          supabase.from('airport').select('code, name, city, country, latitude, longitude'),
+          supabase
+            .from("airport")
+            .select("code, name, city, country, latitude, longitude"),
         ]);
 
         const { data: flightsData, error: flightsError } = flightsResponse;
         const { data: airportsData, error: airportsError } = airportsResponse;
 
-        if (flightsError) {
-          console.error('Error fetching flights:', flightsError);
-          setFlights([]);
-        } else if (flightsData) {
-          const mappedFlights: Flight[] = flightsData.map((f: any) => ({
-            id: f.id,
-            flightNumber: f.flight_number,
-            airline: f.airline,
-            from: f.from_location,
-            to: f.to_location,
-            departureTime: f.departure_time,
-            arrivalTime: f.arrival_time,
-            price: Number(f.price),
-            duration: calculateDuration(f.departure_time, f.arrival_time),
-            class: searchFilters?.class || 'Economy',
-            availableSeats: f.available_seats,
-            totalSeats: f.total_seats,
-            aircraft: f.aircraft_type,
-          }));
-
-          setFlights(mappedFlights);
+        if (airportsError) {
+          console.error("Error fetching airports:", airportsError);
+          setAirportMap({});
         }
 
-        if (airportsError) {
-          console.error('Error fetching airports:', airportsError);
-          setAirportMap({});
-        } else if (airportsData) {
-          const airportRows: AirportCoordinate[] = airportsData.map((airport: any) => ({
+        // Build airport rows/map and a city->country lookup
+        const airportRows: AirportCoordinate[] = (airportsData || []).map(
+          (airport: any) => ({
             code: airport.code,
             name: airport.name,
             city: airport.city,
             country: airport.country,
             latitude: Number(airport.latitude),
             longitude: Number(airport.longitude),
-          }));
+          }),
+        );
 
-          setAirportMap(buildAirportCoordinateMap(airportRows));
+        const nextAirportMap = buildAirportCoordinateMap(airportRows);
+        setAirportMap(nextAirportMap);
+
+        const cityToCountry: Record<string, string> = {};
+        airportRows.forEach((a) => {
+          if (a.city && a.country)
+            cityToCountry[a.city.trim().toLowerCase()] = a.country.trim();
+        });
+
+        if (flightsError) {
+          console.error("Error fetching flights:", flightsError);
+          setFlights([]);
+        } else if (flightsData) {
+          const mappedFlights: Flight[] = flightsData.map((f: any) => {
+            const fromLoc = f.from_location || f.from || "";
+            const toLoc = f.to_location || f.to || "";
+
+            const fromCode = extractAirportCode(fromLoc);
+            const toCode = extractAirportCode(toLoc);
+
+            let fromCountry: string | undefined;
+            let toCountry: string | undefined;
+
+            if (fromCode && nextAirportMap[fromCode])
+              fromCountry = nextAirportMap[fromCode].country;
+            if (toCode && nextAirportMap[toCode])
+              toCountry = nextAirportMap[toCode].country;
+
+            if (!fromCountry && fromLoc)
+              fromCountry = cityToCountry[fromLoc.trim().toLowerCase()];
+            if (!toCountry && toLoc)
+              toCountry = cityToCountry[toLoc.trim().toLowerCase()];
+
+            const isInternational =
+              !!fromCountry && !!toCountry && fromCountry !== toCountry;
+
+            return {
+              id: f.id,
+              flightNumber: f.flight_number,
+              airline: f.airline,
+              from: f.from_location,
+              to: f.to_location,
+              departureTime: f.departure_time,
+              arrivalTime: f.arrival_time,
+              price: Number(f.price),
+              duration: calculateDuration(f.departure_time, f.arrival_time),
+              class: searchFilters?.class || "Economy",
+              availableSeats: f.available_seats,
+              totalSeats: f.total_seats,
+              aircraft: f.aircraft_type,
+              // meta
+              isInternational,
+            } as unknown as Flight;
+          });
+
+          let finalFlights = mappedFlights;
+          if (searchFilters?.flightType) {
+            if (searchFilters.flightType === "International") {
+              finalFlights = mappedFlights.filter(
+                (mf: any) => (mf as any).isInternational,
+              );
+            } else if (searchFilters.flightType === "Domestic") {
+              finalFlights = mappedFlights.filter(
+                (mf: any) => !(mf as any).isInternational,
+              );
+            }
+          }
+
+          setFlights(finalFlights);
         }
       } catch (error) {
-        console.error('Error fetching flight list data:', error);
-        setFlights([]); 
+        console.error("Error fetching flight list data:", error);
+        setFlights([]);
         setAirportMap({});
       } finally {
         setLoading(false);
@@ -123,22 +184,32 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
   };
 
   const handleSelectFlight = (flight: Flight) => {
+    if (!user) {
+      // Save pending selection and require login before proceeding
+      sessionStorage.setItem("pendingSelectedFlight", JSON.stringify(flight));
+      // Ensure search filters are preserved as well
+      if (searchFilters)
+        sessionStorage.setItem("pendingSearch", JSON.stringify(searchFilters));
+      navigate("/login");
+      return;
+    }
+
     setSelectedFlight(flight);
     onNext();
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
     });
   };
 
@@ -163,7 +234,7 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
       {
         latitude: toAirport.latitude,
         longitude: toAirport.longitude,
-      }
+      },
     );
   };
 
@@ -259,14 +330,15 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
           <div className="flex items-center justify-between">
             <h3 className="text-lg sm:text-xl font-semibold text-gray-900">
               <span className="bg-gradient-to-r from-primary-600 to-primary-700 bg-clip-text text-transparent">
-                {flights.length} flight{flights.length > 1 ? 's' : ''} found
+                {flights.length} flight{flights.length > 1 ? "s" : ""} found
               </span>
             </h3>
           </div>
 
           {flights.map((flight) => {
             const distance = getFlightDistance(flight);
-            const estimatedAirTime = distance !== null ? estimateFlightTime(distance) : null;
+            const estimatedAirTime =
+              distance !== null ? estimateFlightTime(distance) : null;
 
             return (
               <div
@@ -343,11 +415,13 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
                         <CurrencyDisplay
                           amount={flight.price}
                           className="mb-1 text-2xl sm:text-3xl font-bold text-primary-600"
-                          />
+                        />
                         <div className="text-sm text-gray-500">per person</div>
                         <div className="mt-2 flex items-center justify-center xl:justify-end">
                           <Star className="h-4 w-4 fill-current text-yellow-400" />
-                          <span className="ml-1 text-sm text-gray-600">4.8</span>
+                          <span className="ml-1 text-sm text-gray-600">
+                            4.8
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -364,7 +438,9 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
 
                         <span className="flex items-center text-sm text-gray-600">
                           <Users className="mr-1 h-4 w-4" />
-                          <span className="font-semibold">{flight.availableSeats}</span>
+                          <span className="font-semibold">
+                            {flight.availableSeats}
+                          </span>
                           <span className="ml-1">seats left</span>
                         </span>
 
@@ -374,10 +450,6 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-4 text-sm text-gray-500">
-                        <div className="flex items-center">
-                          <Wifi className="mr-1 h-4 w-4" />
-                          <span>WiFi</span>
-                        </div>
                         <div className="flex items-center">
                           <Coffee className="mr-1 h-4 w-4" />
                           <span>Meals</span>
@@ -392,13 +464,21 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
                     {distance !== null && (
                       <div className="mt-4 grid grid-cols-1 gap-3 sm:max-w-md sm:grid-cols-2">
                         <div className="rounded-xl border border-primary-100 bg-primary-50 px-3 py-2 text-center">
-                          <p className="text-[11px] font-medium text-gray-500">Flight Distance</p>
-                          <p className="text-sm font-bold text-primary-700">{distance} km</p>
+                          <p className="text-[11px] font-medium text-gray-500">
+                            Flight Distance
+                          </p>
+                          <p className="text-sm font-bold text-primary-700">
+                            {distance} km
+                          </p>
                         </div>
 
                         <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-center">
-                          <p className="text-[11px] font-medium text-gray-500">Estimated Air Time</p>
-                          <p className="text-sm font-bold text-gray-800">{estimatedAirTime}</p>
+                          <p className="text-[11px] font-medium text-gray-500">
+                            Estimated Air Time
+                          </p>
+                          <p className="text-sm font-bold text-gray-800">
+                            {estimatedAirTime}
+                          </p>
                         </div>
                       </div>
                     )}

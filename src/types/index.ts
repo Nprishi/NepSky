@@ -34,6 +34,7 @@ export interface SearchFilters {
   passengers: number;
   class: 'Economy' | 'Business' | 'First';
   tripType: 'one-way' | 'round-trip';
+  flightType?: 'Domestic' | 'International';
 }
 
 export interface Passenger {

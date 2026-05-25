@@ -14,6 +14,7 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({ onNext, onBack }) => {
 
   const [seats, setSeats] = useState<Seat[]>([]);
   const [currentSeats, setCurrentSeats] = useState<string[]>(selectedSeats || []);
+  const [autoSelected, setAutoSelected] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,9 +34,8 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({ onNext, onBack }) => {
 
         const { data: bookedData, error } = await supabase
           .from('booked_seats')
-          .select('seat_number')
-          .eq('flight_id', selectedFlight.id)
-          .eq('status', 'booked');
+          .select('seat_number, status')
+          .eq('flight_id', selectedFlight.id);
 
         if (error) {
           console.error('Error loading booked seats:', error);
@@ -44,17 +44,86 @@ const SeatSelection: React.FC<SeatSelectionProps> = ({ onNext, onBack }) => {
         }
 
         const bookedSeatNumbers = new Set(
-          (bookedData || []).map((item: any) => item.seat_number)
+          (bookedData || [])
+            .filter((item: any) => {
+              const s = (item?.status || '').toString().toLowerCase();
+              // treat any non-explicitly-available status as occupied
+              return s && s !== 'available' && s !== 'free' && s !== 'open';
+            })
+            .map((item: any) => {
+              // normalize seat key from possible DB column names
+              const raw = item.seat_number || item.seatNumber || item.seat || '';
+              return raw.toString().trim().toUpperCase();
+            })
         );
 
-        const mergedSeats = baseSeats.map((seat) => ({
-          ...seat,
-          isAvailable:
-            !bookedSeatNumbers.has(seat.seatNumber) ||
-            currentSeats.includes(seat.seatNumber),
+        // Normalize current selected seats for matching
+        const currentNormalized = new Set(
+          (currentSeats || []).map((s) => s.toString().trim().toUpperCase())
+        );
+
+        // Determine raw availability (not considering availableSeats count)
+        const rawSeats = baseSeats.map((seat) => {
+          const key = (seat.seatNumber || '').toString().trim().toUpperCase();
+          const isBooked = bookedSeatNumbers.has(key) && !currentNormalized.has(key);
+          return {
+            ...seat,
+            _key: key,
+            isBooked,
+            isAvailableRaw: !isBooked || currentNormalized.has(key),
+          } as Seat & { _key: string; isBooked: boolean; isAvailableRaw: boolean };
+        });
+
+        // Respect flight.availableSeats: only that many seats should be available
+        const availableCountFromFlight =
+          typeof selectedFlight.availableSeats === 'number'
+            ? selectedFlight.availableSeats
+            : rawSeats.filter((s) => s.isAvailableRaw).length;
+
+        const availableCandidates = rawSeats.filter((s) => s.isAvailableRaw);
+
+        const allowedAvailableKeys = new Set<string>();
+        // Always allow already-selected seats
+        currentNormalized.forEach((k) => allowedAvailableKeys.add(k));
+
+        // Fill remaining allowed available seats up to availableCountFromFlight
+        const need = Math.max(0, (availableCountFromFlight || 0) - allowedAvailableKeys.size);
+        for (let i = 0; i < availableCandidates.length && allowedAvailableKeys.size < (availableCountFromFlight || 0); i++) {
+          const s = availableCandidates[i];
+          if (!allowedAvailableKeys.has(s._key)) allowedAvailableKeys.add(s._key);
+        }
+
+        const mergedSeats = rawSeats.map((s) => ({
+          id: s.id,
+          seatNumber: s.seatNumber,
+          class: s.class,
+          price: s.price,
+          position: s.position,
+          isAvailable: allowedAvailableKeys.has(s._key),
         }));
 
         setSeats(mergedSeats);
+
+       
+        try {
+          const needed = (passengers?.length || 0) - (currentSeats?.length || 0);
+          if (!autoSelected && needed > 0) {
+            const availableSeatsList = mergedSeats
+              .filter((s) => s.isAvailable && !currentSeats.includes(s.seatNumber))
+              .map((s) => s.seatNumber);
+
+            const picks = availableSeatsList.slice(0, needed);
+            if (picks.length > 0) {
+              const newSelected = [...currentSeats, ...picks];
+              setCurrentSeats(newSelected);
+              setSelectedSeats(newSelected);
+            }
+
+            setAutoSelected(true);
+          }
+        } catch (err) {
+          console.error('Auto-select seats error:', err);
+        }
       } catch (error) {
         console.error('Error generating seat map:', error);
       } finally {

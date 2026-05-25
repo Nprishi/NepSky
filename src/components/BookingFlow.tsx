@@ -29,7 +29,7 @@ const BookingFlow: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
   const [accessError, setAccessError] = useState('');
   const { user } = useAuth();
-  const { searchFilters, selectedFlight } = useBooking();
+  const { searchFilters, selectedFlight, setSearchFilters, setSelectedFlight } = useBooking();
   const navigate = useNavigate();
 
 
@@ -104,10 +104,35 @@ const BookingFlow: React.FC = () => {
   }, [currentStep]);
 
   useEffect(() => {
-    if (!user) {
-      navigate('/login');
-      return;
+    // Restore pending search if present
+    const pendingSearch = sessionStorage.getItem('pendingSearch');
+    if (pendingSearch && !searchFilters) {
+      try {
+        const filters = JSON.parse(pendingSearch);
+        setSearchFilters(filters);
+      } catch (error) {
+        console.error('Failed to parse pending search:', error);
+      } finally {
+        sessionStorage.removeItem('pendingSearch');
+      }
     }
+
+    // Restore pending selected flight (after login)
+    const pendingSelected = sessionStorage.getItem('pendingSelectedFlight');
+    if (pendingSelected && !selectedFlight) {
+      try {
+        const flight = JSON.parse(pendingSelected);
+        setSelectedFlight(flight);
+        setCurrentStep(2);
+      } catch (error) {
+        console.error('Failed to parse pending selected flight:', error);
+      } finally {
+        sessionStorage.removeItem('pendingSelectedFlight');
+      }
+    }
+
+    // If user is present, validate account status and set access errors
+    if (!user) return;
 
     const userStatus = (user as any)?.status?.toLowerCase?.() || 'active';
 
@@ -122,19 +147,7 @@ const BookingFlow: React.FC = () => {
     }
 
     setAccessError('');
-
-    const pendingSearch = sessionStorage.getItem('pendingSearch');
-    if (pendingSearch && !searchFilters) {
-      try {
-        const filters = JSON.parse(pendingSearch);
-        console.log('Pending search found:', filters);
-      } catch (error) {
-        console.error('Failed to parse pending search:', error);
-      } finally {
-        sessionStorage.removeItem('pendingSearch');
-      }
-    }
-  }, [user, navigate, searchFilters]);
+  }, [user, navigate, searchFilters, selectedFlight, setSearchFilters, setSelectedFlight]);
 
   const steps = useMemo(
     () => [
@@ -216,9 +229,7 @@ const BookingFlow: React.FC = () => {
     }
   };
 
-  if (!user) {
-    return null;
-  }
+  
 
   const userStatus = (user as any)?.status?.toLowerCase?.() || 'active';
   const progressWidth = `${(currentStep / TOTAL_STEPS) * 100}%`;
