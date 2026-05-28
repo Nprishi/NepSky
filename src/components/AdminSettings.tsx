@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
+import AdminKeyGate from './AdminKeyGate';
 
 interface AdminSettingsProps {
   onUpdate?: () => void;
@@ -224,32 +225,33 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
   }, [settings.esewa_secret_key]);
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white shadow-xl">
-        <div className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-8">
-          <div className="flex items-start gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
-              <Settings className="h-7 w-7 text-blue-200" />
+    <AdminKeyGate>
+      <div className="space-y-6">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 text-white shadow-xl">
+          <div className="flex flex-col gap-6 p-6 md:flex-row md:items-center md:justify-between md:p-8">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
+                <Settings className="h-7 w-7 text-blue-200" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold">{t('admin.settings')}</h2>
+                <p className="mt-1 text-sm text-blue-100/80">
+                  Manage exchange rate, site information, and payment gateway details.
+                </p>
+              </div>
             </div>
-            <div>
-              <h2 className="text-2xl font-bold">{t('admin.settings')}</h2>
-              <p className="mt-1 text-sm text-blue-100/80">
-                Manage exchange rate, site information, and payment gateway details.
-              </p>
-            </div>
-          </div>
 
-          <button
-            type="button"
-            onClick={loadSettings}
-            disabled={loading || initialLoading}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            <RefreshCw className={`h-4 w-4 ${initialLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </button>
+            <button
+              type="button"
+              onClick={loadSettings}
+              disabled={loading || initialLoading}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-sm font-medium text-white transition hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <RefreshCw className={`h-4 w-4 ${initialLoading ? 'animate-spin' : ''}`} />
+              Refresh
+            </button>
+          </div>
         </div>
-      </div>
 
       {success && (
         <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 shadow-sm">
@@ -587,6 +589,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
       )}
 
     </div>
+    </AdminKeyGate>
   );
 };
 

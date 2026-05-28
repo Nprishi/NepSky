@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Edit2, Trash2, Plane } from 'lucide-react';
+import Swal from 'sweetalert2';
 import { supabase } from '../lib/supabase';
+import AdminKeyGate from './AdminKeyGate';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface FlightData {
@@ -103,14 +105,99 @@ const FlightManagement = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm('Are you sure you want to delete this flight?')) {
-      await supabase.from('flights').delete().eq('id', id);
+    const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
+
+    if (!expected) {
+      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      return;
+    }
+
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Confirm admin key',
+      input: 'password',
+      inputAttributes: {
+        autocomplete: 'new-password',
+        name: 'admin_key',
+        autocapitalize: 'off',
+        spellcheck: 'false',
+      },
+      inputPlaceholder: 'Supabase anon key',
+      showCancelButton: true,
+      confirmButtonText: 'Verify & Delete',
+      preConfirm: (v: string) => {
+        const trimmed = typeof v === 'string' ? v.trim() : '';
+        if (!trimmed) Swal.showValidationMessage('Key is required');
+        return trimmed;
+      },
+    });
+
+    if (!isConfirmed) return;
+
+    if ((value as string).toString().trim() !== expected) {
+      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      return;
+    }
+
+   
+    sessionStorage.setItem('supabase_key_verified', 'true');
+
+    const confirmResult = await Swal.fire({
+      title: 'Delete flight?',
+      text: 'This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+    });
+
+    if (!confirmResult.isConfirmed) return;
+
+    const { error } = await supabase.from('flights').delete().eq('id', id);
+    if (error) {
+      console.error('Delete flight error:', error);
+      await Swal.fire({ icon: 'error', title: 'Delete failed', text: error.message });
+    } else {
+      await Swal.fire({ icon: 'success', title: 'Deleted', timer: 1000, showConfirmButton: false });
       loadFlights();
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
+
+    if (!expected) {
+      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      return;
+    }
+
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Confirm Admin key',
+      input: 'password',
+      inputAttributes: {
+        autocomplete: 'new-password',
+        name: 'admin_key',
+        autocapitalize: 'off',
+        spellcheck: 'false',
+      },
+      inputPlaceholder: 'Supabase anon key',
+      showCancelButton: true,
+      confirmButtonText: 'Verify & Submit',
+      preConfirm: (v: string) => {
+        const trimmed = typeof v === 'string' ? v.trim() : '';
+        if (!trimmed) Swal.showValidationMessage('Key is required');
+        return trimmed;
+      },
+    });
+
+    if (!isConfirmed) return;
+
+    if ((value as string).toString().trim() !== expected) {
+      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      return;
+    }
+
+    sessionStorage.setItem('supabase_key_verified', 'true');
 
     const flightData = {
       ...formData,
@@ -128,9 +215,10 @@ const FlightManagement = () => {
 
       if (error) {
         console.error('Error updating flight:', error);
-        alert('Failed to update flight: ' + error.message);
+        await Swal.fire({ icon: 'error', title: 'Failed to update flight', text: error.message });
         return;
       }
+      await Swal.fire({ icon: 'success', title: 'Updated', timer: 1000, showConfirmButton: false });
     } else {
       const newFlightData = {
         ...flightData,
@@ -141,9 +229,10 @@ const FlightManagement = () => {
 
       if (error) {
         console.error('Error adding flight:', error);
-        alert('Failed to add flight: ' + error.message);
+        await Swal.fire({ icon: 'error', title: 'Failed to add flight', text: error.message });
         return;
       }
+      await Swal.fire({ icon: 'success', title: 'Created', timer: 1000, showConfirmButton: false });
     }
 
     setShowModal(false);
@@ -168,7 +257,8 @@ const FlightManagement = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <AdminKeyGate>
+      <div className="space-y-6">
       <div className="bg-white rounded-lg shadow p-6">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">{t('admin.flights')}</h2>
@@ -451,7 +541,8 @@ const FlightManagement = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AdminKeyGate>
   );
 };
 

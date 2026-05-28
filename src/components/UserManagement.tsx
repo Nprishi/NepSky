@@ -16,6 +16,7 @@ import {
   Users,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import AdminKeyGate from './AdminKeyGate';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface UserData {
@@ -320,29 +321,30 @@ const UserManagement: React.FC = () => {
   const suspendedCount = users.filter((u) => getUserStatus(u) === 'Suspended').length;
 
   return (
-    <div className="space-y-6">
-      <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
-        <div className="bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 p-1" />
-        <div className="p-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h2 className="text-2xl font-bold text-slate-900">
-                {t('admin.users') || 'User Management'}
-              </h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Manage users, roles, account block, suspension, and access control.
-              </p>
-            </div>
+    <AdminKeyGate>
+      <div className="space-y-6">
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="bg-gradient-to-r from-slate-950 via-blue-950 to-slate-900 p-1" />
+          <div className="p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div>
+                <h2 className="text-2xl font-bold text-slate-900">
+                  {t('admin.users') || 'User Management'}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Manage users, roles, account block, suspension, and access control.
+                </p>
+              </div>
 
-            <button
-              onClick={loadUsers}
-              disabled={loading}
-              className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 px-4 py-3 text-sm font-semibold text-white shadow transition hover:translate-y-[-1px] disabled:opacity-60"
-            >
-              <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-              Refresh
-            </button>
-          </div>
+              <button
+                onClick={loadUsers}
+                disabled={loading}
+                className="inline-flex items-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-600 to-green-500 px-4 py-3 text-sm font-semibold text-white shadow transition hover:translate-y-[-1px] disabled:opacity-60"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </button>
+            </div>
 
           {(error || successMessage) && (
             <div className="mt-5 space-y-3">
@@ -829,6 +831,7 @@ const UserManagement: React.FC = () => {
         </div>
       )}
     </div>
+    </AdminKeyGate>
   );
 };
 

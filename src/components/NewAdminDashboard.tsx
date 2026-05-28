@@ -16,6 +16,7 @@ import FlightManagement from './FlightManagement';
 import BookingManagement from './BookingManagement';
 import PaymentManagement from './PaymentManagement';
 import AdminSettings from './AdminSettings';
+import AdminKeyGate from './AdminKeyGate';
 
 type Tab = 'overview' | 'users' | 'flights' | 'bookings' | 'payments' | 'settings';
 
@@ -502,7 +503,8 @@ const NewAdminDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <AdminKeyGate>
+      <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 shadow-sm backdrop-blur">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-start gap-4">
@@ -579,7 +581,8 @@ const NewAdminDashboard = () => {
         {activeTab === 'payments' && <PaymentManagement />}
         {activeTab === 'settings' && <AdminSettings onUpdate={() => fetchDashboardData(true)} />}
       </div>
-    </div>
+      </div>
+    </AdminKeyGate>
   );
 };
 
