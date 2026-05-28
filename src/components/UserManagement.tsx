@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import AdminKeyGate from './AdminKeyGate';
+import Swal from 'sweetalert2';
 import { useLanguage } from '../contexts/LanguageContext';
 
 interface UserData {
@@ -133,32 +134,68 @@ const UserManagement: React.FC = () => {
     userId: string,
     payload: Record<string, any>,
     successText: string
-  ) => {
+  ): Promise<boolean> => {
     setActionLoadingId(userId);
     closeFeedback();
 
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('users')
         .update({
           ...payload,
           updated_at: new Date().toISOString(),
         })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select('*')
+        .single();
 
       if (error) throw error;
-      
+
       await loadUsers();
       showSuccess(successText);
+      return true;
     } catch (err: any) {
       console.error('User action failed:', err);
-      setError(err.message || 'Failed to update user');
+      const msg = err?.message || err?.details || JSON.stringify(err);
+      setError(msg || 'Failed to update user');
+      await Swal.fire({ icon: 'error', title: 'Operation failed', text: String(msg) });
+      return false;
     } finally {
       setActionLoadingId(null);
     }
   };
 
-  const handleEdit = (user: UserData) => {
+  const handleEdit = async (user: UserData) => {
+    const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
+
+    if (!expected) {
+      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      return;
+    }
+
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Confirm admin key',
+      input: 'password',
+      inputAttributes: { autocomplete: 'new-password', name: 'admin_key', autocapitalize: 'off', spellcheck: 'false' },
+      inputPlaceholder: 'Supabase anon key',
+      showCancelButton: true,
+      confirmButtonText: 'Verify & Edit',
+      preConfirm: (v: string) => {
+        const trimmed = typeof v === 'string' ? v.trim() : '';
+        if (!trimmed) Swal.showValidationMessage('Key is required');
+        return trimmed;
+      },
+    });
+
+    if (!isConfirmed) return;
+
+    if ((value as string).toString().trim() !== expected) {
+      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      return;
+    }
+
+    sessionStorage.setItem('supabase_key_verified', 'true');
+
     setEditingUser(user);
     setFormData({
       email: user.email,
@@ -167,13 +204,73 @@ const UserManagement: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleBlock = (user: UserData) => {
+  const handleBlock = async (user: UserData) => {
+    const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
+
+    if (!expected) {
+      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      return;
+    }
+
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Confirm admin key',
+      input: 'password',
+      inputAttributes: { autocomplete: 'new-password', name: 'admin_key', autocapitalize: 'off', spellcheck: 'false' },
+      inputPlaceholder: 'Supabase anon key',
+      showCancelButton: true,
+      confirmButtonText: 'Verify & Block',
+      preConfirm: (v: string) => {
+        const trimmed = typeof v === 'string' ? v.trim() : '';
+        if (!trimmed) Swal.showValidationMessage('Key is required');
+        return trimmed;
+      },
+    });
+
+    if (!isConfirmed) return;
+
+    if ((value as string).toString().trim() !== expected) {
+      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      return;
+    }
+
+    sessionStorage.setItem('supabase_key_verified', 'true');
+
     setSelectedUser(user);
     setBlockReason('');
     setShowBlockModal(true);
   };
 
-  const handleSuspend = (user: UserData) => {
+  const handleSuspend = async (user: UserData) => {
+    const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
+
+    if (!expected) {
+      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      return;
+    }
+
+    const { value, isConfirmed } = await Swal.fire({
+      title: 'Confirm admin key',
+      input: 'password',
+      inputAttributes: { autocomplete: 'new-password', name: 'admin_key', autocapitalize: 'off', spellcheck: 'false' },
+      inputPlaceholder: 'Supabase anon key',
+      showCancelButton: true,
+      confirmButtonText: 'Verify & Suspend',
+      preConfirm: (v: string) => {
+        const trimmed = typeof v === 'string' ? v.trim() : '';
+        if (!trimmed) Swal.showValidationMessage('Key is required');
+        return trimmed;
+      },
+    });
+
+    if (!isConfirmed) return;
+
+    if ((value as string).toString().trim() !== expected) {
+      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      return;
+    }
+
+    sessionStorage.setItem('supabase_key_verified', 'true');
+
     setSelectedUser(user);
     setSuspendReason('');
     setSuspendDays(7);
@@ -206,18 +303,18 @@ const UserManagement: React.FC = () => {
       setError('Please provide a reason for blocking');
       return;
     }
-
-    await syncUserAction(
+    const ok = await syncUserAction(
       selectedUser.id,
       {
         blocked: true,
         blocked_reason: blockReason.trim(),
         suspended_until: null,
         suspended_reason: null,
-        status: 'blocked',
       },
       'User blocked successfully'
     );
+
+    if (!ok) return;
 
     setShowBlockModal(false);
     setSelectedUser(null);
@@ -235,17 +332,18 @@ const UserManagement: React.FC = () => {
     const suspendUntil = new Date();
     suspendUntil.setDate(suspendUntil.getDate() + suspendDays);
 
-    await syncUserAction(
+    const ok = await syncUserAction(
       selectedUser.id,
       {
         blocked: false,
         blocked_reason: null,
         suspended_until: suspendUntil.toISOString(),
         suspended_reason: suspendReason.trim(),
-        status: 'suspended',
       },
       'User suspended successfully'
     );
+
+    if (!ok) return;
 
     setShowSuspendModal(false);
     setSelectedUser(null);
@@ -256,17 +354,18 @@ const UserManagement: React.FC = () => {
   const confirmUnblock = async () => {
     if (!selectedUser) return;
 
-    await syncUserAction(
+    const ok = await syncUserAction(
       selectedUser.id,
       {
         blocked: false,
         blocked_reason: null,
         suspended_until: null,
         suspended_reason: null,
-        status: 'active',
       },
       'User unblocked successfully'
     );
+
+    if (!ok) return;
 
     setShowUnblockModal(false);
     setSelectedUser(null);
