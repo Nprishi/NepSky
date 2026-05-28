@@ -38,6 +38,25 @@ interface UserData {
 
 const UserManagement: React.FC = () => {
   const { t } = useLanguage();
+  const openSwalWithNavClose = (options: any) => {
+    const onNav = () => {
+      try {
+        if (Swal.isVisible && Swal.isVisible()) Swal.close();
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    window.addEventListener('popstate', onNav);
+    window.addEventListener('beforeunload', onNav);
+    window.addEventListener('hashchange', onNav);
+
+    return Swal.fire(options).finally(() => {
+      window.removeEventListener('popstate', onNav);
+      window.removeEventListener('beforeunload', onNav);
+      window.removeEventListener('hashchange', onNav);
+    });
+  };
   const [users, setUsers] = useState<UserData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
@@ -158,7 +177,7 @@ const UserManagement: React.FC = () => {
       console.error('User action failed:', err);
       const msg = err?.message || err?.details || JSON.stringify(err);
       setError(msg || 'Failed to update user');
-      await Swal.fire({ icon: 'error', title: 'Operation failed', text: String(msg) });
+      await openSwalWithNavClose({ icon: 'error', title: 'Operation failed', text: String(msg) });
       return false;
     } finally {
       setActionLoadingId(null);
@@ -169,11 +188,11 @@ const UserManagement: React.FC = () => {
     const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
 
     if (!expected) {
-      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
       return;
     }
 
-    const { value, isConfirmed } = await Swal.fire({
+    const { value, isConfirmed } = await openSwalWithNavClose({
       title: 'Confirm admin key',
       input: 'password',
       inputAttributes: { autocomplete: 'new-password', name: 'admin_key', autocapitalize: 'off', spellcheck: 'false' },
@@ -190,7 +209,7 @@ const UserManagement: React.FC = () => {
     if (!isConfirmed) return;
 
     if ((value as string).toString().trim() !== expected) {
-      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
       return;
     }
 
@@ -208,11 +227,11 @@ const UserManagement: React.FC = () => {
     const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
 
     if (!expected) {
-      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
       return;
     }
 
-    const { value, isConfirmed } = await Swal.fire({
+    const { value, isConfirmed } = await openSwalWithNavClose({
       title: 'Confirm admin key',
       input: 'password',
       inputAttributes: { autocomplete: 'new-password', name: 'admin_key', autocapitalize: 'off', spellcheck: 'false' },
@@ -229,7 +248,7 @@ const UserManagement: React.FC = () => {
     if (!isConfirmed) return;
 
     if ((value as string).toString().trim() !== expected) {
-      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
       return;
     }
 
@@ -244,11 +263,11 @@ const UserManagement: React.FC = () => {
     const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
 
     if (!expected) {
-      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
       return;
     }
 
-    const { value, isConfirmed } = await Swal.fire({
+    const { value, isConfirmed } = await openSwalWithNavClose({
       title: 'Confirm admin key',
       input: 'password',
       inputAttributes: { autocomplete: 'new-password', name: 'admin_key', autocapitalize: 'off', spellcheck: 'false' },
@@ -265,7 +284,7 @@ const UserManagement: React.FC = () => {
     if (!isConfirmed) return;
 
     if ((value as string).toString().trim() !== expected) {
-      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
       return;
     }
 

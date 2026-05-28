@@ -23,6 +23,25 @@ interface FlightData {
 }
 
 const FlightManagement = () => {
+  const openSwalWithNavClose = (options: any) => {
+    const onNav = () => {
+      try {
+        if (Swal.isVisible && Swal.isVisible()) Swal.close();
+      } catch (e) {
+        // ignore
+      }
+    };
+
+    window.addEventListener('popstate', onNav);
+    window.addEventListener('beforeunload', onNav);
+    window.addEventListener('hashchange', onNav);
+
+    return Swal.fire(options).finally(() => {
+      window.removeEventListener('popstate', onNav);
+      window.removeEventListener('beforeunload', onNav);
+      window.removeEventListener('hashchange', onNav);
+    });
+  };
   const [flights, setFlights] = useState<FlightData[]>([]);
   const [filteredFlights, setFilteredFlights] = useState<FlightData[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -108,11 +127,11 @@ const FlightManagement = () => {
     const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
 
     if (!expected) {
-      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
       return;
     }
 
-    const { value, isConfirmed } = await Swal.fire({
+    const { value, isConfirmed } = await openSwalWithNavClose({
       title: 'Confirm admin key',
       input: 'password',
       inputAttributes: {
@@ -134,14 +153,14 @@ const FlightManagement = () => {
     if (!isConfirmed) return;
 
     if ((value as string).toString().trim() !== expected) {
-      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
       return;
     }
 
    
     sessionStorage.setItem('supabase_key_verified', 'true');
 
-    const confirmResult = await Swal.fire({
+    const confirmResult = await openSwalWithNavClose({
       title: 'Delete flight?',
       text: 'This action cannot be undone.',
       icon: 'warning',
@@ -154,9 +173,9 @@ const FlightManagement = () => {
     const { error } = await supabase.from('flights').delete().eq('id', id);
     if (error) {
       console.error('Delete flight error:', error);
-      await Swal.fire({ icon: 'error', title: 'Delete failed', text: error.message });
+      await openSwalWithNavClose({ icon: 'error', title: 'Delete failed', text: error.message });
     } else {
-      await Swal.fire({ icon: 'success', title: 'Deleted', timer: 1000, showConfirmButton: false });
+      await openSwalWithNavClose({ icon: 'success', title: 'Deleted', timer: 1000, showConfirmButton: false });
       loadFlights();
     }
   };
@@ -167,11 +186,11 @@ const FlightManagement = () => {
     const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
 
     if (!expected) {
-      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
       return;
     }
 
-    const { value, isConfirmed } = await Swal.fire({
+    const { value, isConfirmed } = await openSwalWithNavClose({
       title: 'Confirm Admin key',
       input: 'password',
       inputAttributes: {
@@ -193,7 +212,7 @@ const FlightManagement = () => {
     if (!isConfirmed) return;
 
     if ((value as string).toString().trim() !== expected) {
-      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
+      await openSwalWithNavClose({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
       return;
     }
 
@@ -215,10 +234,10 @@ const FlightManagement = () => {
 
       if (error) {
         console.error('Error updating flight:', error);
-        await Swal.fire({ icon: 'error', title: 'Failed to update flight', text: error.message });
+        await openSwalWithNavClose({ icon: 'error', title: 'Failed to update flight', text: error.message });
         return;
       }
-      await Swal.fire({ icon: 'success', title: 'Updated', timer: 1000, showConfirmButton: false });
+      await openSwalWithNavClose({ icon: 'success', title: 'Updated', timer: 1000, showConfirmButton: false });
     } else {
       const newFlightData = {
         ...flightData,
@@ -229,10 +248,10 @@ const FlightManagement = () => {
 
       if (error) {
         console.error('Error adding flight:', error);
-        await Swal.fire({ icon: 'error', title: 'Failed to add flight', text: error.message });
+        await openSwalWithNavClose({ icon: 'error', title: 'Failed to add flight', text: error.message });
         return;
       }
-      await Swal.fire({ icon: 'success', title: 'Created', timer: 1000, showConfirmButton: false });
+      await openSwalWithNavClose({ icon: 'success', title: 'Created', timer: 1000, showConfirmButton: false });
     }
 
     setShowModal(false);

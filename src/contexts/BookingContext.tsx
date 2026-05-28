@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { supabase } from '../lib/supabase';
+import { fetchExchangeRates } from '../utils/currencyConverter';
 import { Flight, SearchFilters, Passenger, Booking, PaymentDetails } from '../types';
 
 interface BookingContextType {
@@ -163,22 +164,16 @@ export const BookingProvider: React.FC<BookingProviderProps> = ({ children }) =>
   const resolveExchangeRateAtBooking = async (currencyCode: string): Promise<number> => {
     if (currencyCode === 'USD') return 1;
 
-    const { data: settings } = await supabase.from('site_settings').select('*').maybeSingle();
-
-    if (!settings) {
-      if (currencyCode === 'NPR') return 132.5;
-      return 1;
-    }
-
-    const dynamicColumn = `usd_to_${currencyCode.toLowerCase()}_rate`;
-    const dynamicRate = settings[dynamicColumn];
-
-    if (typeof dynamicRate === 'number' && dynamicRate > 0) {
-      return dynamicRate;
-    }
-
-    if (currencyCode === 'NPR' && typeof settings.usd_to_npr_rate === 'number') {
-      return settings.usd_to_npr_rate;
+    try {
+      const rates = await fetchExchangeRates();
+      // rates are USD-base (1 USD = rates[currency])
+      if ((rates as any)[currencyCode]) {
+        return (rates as any)[currencyCode];
+      }
+      // fallback to NPR if requested currency not available
+      if (currencyCode === 'NPR') return rates.NPR;
+    } catch (err) {
+      console.warn('Failed to fetch exchange rates:', err);
     }
 
     return 1;

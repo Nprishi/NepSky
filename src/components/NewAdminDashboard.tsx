@@ -11,14 +11,16 @@ import {
 import { useAdmin } from '../contexts/AdminContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { supabase } from '../lib/supabase';
+import { fetchExchangeRates } from '../utils/currencyConverter';
 import UserManagement from './UserManagement';
 import FlightManagement from './FlightManagement';
 import BookingManagement from './BookingManagement';
 import PaymentManagement from './PaymentManagement';
 import AdminSettings from './AdminSettings';
+import NotificationsManagement from './NotificationsManagement';
 import AdminKeyGate from './AdminKeyGate';
 
-type Tab = 'overview' | 'users' | 'flights' | 'bookings' | 'payments' | 'settings';
+type Tab = 'overview' | 'users' | 'flights' | 'notifications' | 'bookings' | 'payments' | 'settings';
 
 const NewAdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<Tab>('overview');
@@ -59,6 +61,7 @@ const NewAdminDashboard = () => {
       { key: 'overview' as Tab, label: t('admin.overview'), icon: BarChart3 },
       { key: 'users' as Tab, label: t('admin.users'), icon: Users },
       { key: 'flights' as Tab, label: t('admin.flights'), icon: Plane },
+      { key: 'notifications' as Tab, label: 'Notifications', icon: AlertCircle },
       { key: 'bookings' as Tab, label: t('admin.bookings'), icon: BookOpen },
       { key: 'payments' as Tab, label: t('admin.payments'), icon: CreditCard },
       { key: 'settings' as Tab, label: t('admin.settings'), icon: SettingsIcon },
@@ -96,22 +99,13 @@ const NewAdminDashboard = () => {
 
   const loadStats = async () => {
     try {
-      // Safer settings fetch: get latest available rate
-      const { data: settingsData, error: settingsError } = await supabase
-        .from('site_settings')
-        .select('usd_to_npr_rate, updated_at')
-        .order('updated_at', { ascending: false, nullsFirst: false })
-        .limit(1);
-
-      if (settingsError) {
-        console.error('Settings load error:', settingsError);
+      try {
+        const rates = await fetchExchangeRates();
+        setExchangeRate(rates.NPR || 132.5);
+      } catch (err) {
+        console.warn('Failed to load exchange rates for dashboard, falling back to 132.5', err);
+        setExchangeRate(132.5);
       }
-
-      const rate = settingsData?.[0]?.usd_to_npr_rate
-        ? Number(settingsData[0].usd_to_npr_rate)
-        : 132.5;
-
-      setExchangeRate(rate);
 
       const [usersRes, flightsRes, bookingsRes, paymentsRes] = await Promise.all([
         supabase.from('users').select('id', { count: 'exact', head: true }),
@@ -579,6 +573,7 @@ const NewAdminDashboard = () => {
         {activeTab === 'flights' && <FlightManagement />}
         {activeTab === 'bookings' && <BookingManagement />}
         {activeTab === 'payments' && <PaymentManagement />}
+        {activeTab === 'notifications' && <NotificationsManagement />}
         {activeTab === 'settings' && <AdminSettings onUpdate={() => fetchDashboardData(true)} />}
       </div>
       </div>

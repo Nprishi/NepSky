@@ -17,6 +17,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useLanguage } from '../contexts/LanguageContext';
 import AdminKeyGate from './AdminKeyGate';
+import { fetchExchangeRates } from '../utils/currencyConverter';
 
 interface AdminSettingsProps {
   onUpdate?: () => void;
@@ -44,9 +45,9 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
   const [showSecretKey, setShowSecretKey] = useState(false);
+  const [exchangeRatePreview, setExchangeRatePreview] = useState<number | null>(null);
 
   const [settings, setSettings] = useState({
-    usd_to_npr_rate: '132.50',
     site_name: 'Nepal International Air Ticketing',
     site_email: 'info@nepalairlines.com',
     site_phone: '+977-1-1234567',
@@ -56,6 +57,14 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
 
   useEffect(() => {
     loadSettings();
+    (async () => {
+      try {
+        const rates = await fetchExchangeRates();
+        setExchangeRatePreview(rates.NPR ?? null);
+      } catch (err) {
+        setExchangeRatePreview(null);
+      }
+    })();
   }, []);
 
   useEffect(() => {
@@ -79,7 +88,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
 
       if (data) {
         setSettings({
-          usd_to_npr_rate: data.usd_to_npr_rate?.toString() || '132.50',
           site_name: data.site_name || 'Nepal International Air Ticketing',
           site_email: data.site_email || 'info@nepalairlines.com',
           site_phone: data.site_phone || '+977-1-1234567',
@@ -110,15 +118,8 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
     setSuccess(false);
 
     try {
-      const usdRate = parseFloat(settings.usd_to_npr_rate);
-
-      if (Number.isNaN(usdRate) || usdRate <= 0) {
-        throw new Error('Please enter a valid USD to NPR exchange rate');
-      }
-
       const payload = {
         id: SETTINGS_ROW_ID,
-        usd_to_npr_rate: usdRate,
         site_name: settings.site_name.trim(),
         site_email: settings.site_email.trim(),
         site_phone: settings.site_phone.trim(),
@@ -212,12 +213,6 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
     }
   };
 
-  const ratePreview = useMemo(() => {
-    const rate = parseFloat(settings.usd_to_npr_rate || '0');
-    if (Number.isNaN(rate)) return '0.00';
-    return rate.toFixed(2);
-  }, [settings.usd_to_npr_rate]);
-
   const secretKeyMasked = useMemo(() => {
     if (!settings.esewa_secret_key) return 'Not configured';
     if (settings.esewa_secret_key.length <= 4) return '••••';
@@ -236,7 +231,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
               <div>
                 <h2 className="text-2xl font-bold">{t('admin.settings')}</h2>
                 <p className="mt-1 text-sm text-blue-100/80">
-                  Manage exchange rate, site information, and payment gateway details.
+                  Manage site information and payment gateway details.
                 </p>
               </div>
             </div>
@@ -323,27 +318,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
             </div>
 
             <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-700">
-                {t('settings.exchangeRate')}
-              </label>
-              <div className="relative">
-                <DollarSign className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value={settings.usd_to_npr_rate}
-                  onChange={(e) => handleChange('usd_to_npr_rate', e.target.value)}
-                  disabled={loading || initialLoading}
-                  className="w-full rounded-2xl border border-slate-300 bg-white py-3 pl-12 pr-4 text-slate-900 outline-none transition focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
-                  required
-                />
-              </div>
-              <div className="mt-3 rounded-2xl bg-slate-50 px-4 py-3">
-                <p className="text-sm text-slate-700">
-                  Current preview: <span className="font-semibold">1 USD = रू {ratePreview} NPR</span>
-                </p>
-              </div>
+              <p className="text-sm text-slate-700">Exchange rates are now fetched in real-time via the system API and cannot be edited here.</p>
             </div>
           </section>
 
@@ -496,7 +471,7 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
             <div className="mt-6 space-y-4">
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Exchange Rate</p>
-                <p className="mt-1 text-base font-bold text-slate-900">1 USD = रू {ratePreview} NPR</p>
+                <p className="mt-1 text-base font-bold text-slate-900">1 USD = रू {exchangeRatePreview ? exchangeRatePreview.toFixed(2) : '—'} NPR</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Site Name</p>
