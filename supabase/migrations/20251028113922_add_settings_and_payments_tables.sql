@@ -1,36 +1,3 @@
-/*
-  # Add Settings and Payments Tables
-
-  1. New Tables
-    - `site_settings`
-      - `id` (uuid, primary key)
-      - `usd_to_npr_rate` (numeric) - Exchange rate from USD to NPR
-      - `site_name` (text) - Site name
-      - `site_email` (text) - Site contact email
-      - `site_phone` (text) - Site contact phone
-      - `esewa_merchant_id` (text) - eSewa payment merchant ID
-      - `esewa_secret_key` (text) - eSewa payment secret key
-      - `updated_at` (timestamp)
-      - `updated_by` (uuid, foreign key to users)
-    
-    - `payments`
-      - `id` (uuid, primary key)
-      - `booking_id` (uuid, foreign key to bookings)
-      - `user_id` (uuid, foreign key to users)
-      - `amount_usd` (numeric) - Amount in USD
-      - `amount_npr` (numeric) - Amount in NPR
-      - `exchange_rate` (numeric) - Exchange rate used
-      - `payment_method` (text) - Payment method used
-      - `payment_gateway` (text) - Payment gateway (esewa, etc.)
-      - `transaction_id` (text) - Transaction ID from gateway
-      - `status` (text) - Payment status
-      - `payment_date` (timestamp)
-      - `created_at` (timestamp)
-
-  2. Security
-    - Enable RLS on both tables
-    - Add policies for admin access only
-*/
 
 CREATE TABLE IF NOT EXISTS site_settings (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

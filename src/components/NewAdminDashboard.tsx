@@ -19,6 +19,7 @@ import PaymentManagement from './PaymentManagement';
 import AdminSettings from './AdminSettings';
 import NotificationsManagement from './NotificationsManagement';
 import AdminKeyGate from './AdminKeyGate';
+import { useSiteSettings } from '../contexts/SiteSettingsContext';
 
 type Tab = 'overview' | 'users' | 'flights' | 'notifications' | 'bookings' | 'payments' | 'settings';
 
@@ -41,6 +42,7 @@ const NewAdminDashboard = () => {
   const { admin, logout } = useAdmin();
   const { language, toggleLanguage, t } = useLanguage();
   const navigate = useNavigate();
+  const { settings: siteSettings } = useSiteSettings();
 
   const COLORS = ['#2563EB', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6', '#06B6D4'];
 
@@ -53,7 +55,7 @@ const NewAdminDashboard = () => {
   }, []);
 
   const translatedWelcome = useMemo(() => {
-    return language === 'en' ? 'Welcome back' : 'फेरि स्वागत छ';
+    return language === 'en' ? (siteSettings.dashboard_announcement || 'Welcome back') : (siteSettings.dashboard_announcement || 'फेरि स्वागत छ');
   }, [language]);
 
   const tabList = useMemo(

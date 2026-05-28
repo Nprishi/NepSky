@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { BookingProvider } from './contexts/BookingContext';
+import { SiteSettingsProvider } from './contexts/SiteSettingsContext';
 import { AdminProvider } from './contexts/AdminContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import Header from './components/Header';
@@ -26,40 +27,42 @@ function App() {
     <LanguageProvider>
       <AuthProvider>
         <BookingProvider>
-          <AdminProvider>
-            <Router>
-              <Routes>
-                <Route path="/select-login" element={<LoginSelection />} />
-                <Route path="/select-signup" element={<SignupSelection />} />
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/admin/dashboard" element={<NewAdminDashboard />} />
-                <Route
-                  path="/*"
-                  element={
-                    <div className="min-h-screen bg-gray-50">
-                      <Header />
-                      <main>
-                        <Routes>
-                          <Route path="/" element={<Home />} />
-                          <Route path="/login" element={<Login />} />
-                          <Route path="/signup" element={<Signup />} />
-                          <Route path="/booking" element={<BookingFlow />} />
-                          <Route path="/my-bookings" element={<MyBookings />} />
-                          <Route path="/profile" element={<Profile />} />
-                          <Route path="/check-in" element={<CheckIn />} />
-                          <Route path="/support" element={<Support />} />
-                          <Route path="/settings" element={<Settings />} />
-                          <Route path="/payment/success" element={<PaymentSuccess />} />
-                          <Route path="/payment/failure" element={<PaymentFailure />} />
-                          <Route path="*" element={<Navigate to="/" replace />} />
-                        </Routes>
-                      </main>
-                    </div>
-                  }
-                />
-              </Routes>
-            </Router>
-          </AdminProvider>
+          <SiteSettingsProvider>
+            <AdminProvider>
+              <Router>
+                <Routes>
+                  <Route path="/select-login" element={<LoginSelection />} />
+                  <Route path="/select-signup" element={<SignupSelection />} />
+                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route path="/admin/dashboard" element={<NewAdminDashboard />} />
+                  <Route
+                    path="/*"
+                    element={
+                      <div className="min-h-screen bg-gray-50">
+                        <Header />
+                        <main>
+                          <Routes>
+                            <Route path="/" element={<Home />} />
+                            <Route path="/login" element={<Login />} />
+                            <Route path="/signup" element={<Signup />} />
+                            <Route path="/booking" element={<BookingFlow />} />
+                            <Route path="/my-bookings" element={<MyBookings />} />
+                            <Route path="/profile" element={<Profile />} />
+                            <Route path="/check-in" element={<CheckIn />} />
+                            <Route path="/support" element={<Support />} />
+                            <Route path="/settings" element={<Settings />} />
+                            <Route path="/payment/success" element={<PaymentSuccess />} />
+                            <Route path="/payment/failure" element={<PaymentFailure />} />
+                            <Route path="*" element={<Navigate to="/" replace />} />
+                          </Routes>
+                        </main>
+                      </div>
+                    }
+                  />
+                </Routes>
+              </Router>
+            </AdminProvider>
+          </SiteSettingsProvider>
         </BookingProvider>
       </AuthProvider>
     </LanguageProvider>

@@ -1,14 +1,3 @@
-/*
-  # Add Admin User
-
-  1. Changes
-    - Insert admin user with email adminself@gmail.com
-    - Set role as admin
-    - Set status as active
-  
-  2. Security
-    - Admin user will have full access to admin dashboard
-*/
 
 -- Insert admin user if not exists
 DO $$

@@ -111,7 +111,7 @@ CREATE TABLE IF NOT EXISTS notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id uuid REFERENCES users(id) ON DELETE CASCADE,
   title text NOT NULL,
-  body text,
+  messages text,
   channel text DEFAULT 'in-app', 
   is_read boolean DEFAULT false,
   sent_at timestamptz,

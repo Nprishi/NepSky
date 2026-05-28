@@ -53,6 +53,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
     site_phone: '+977-1-1234567',
     esewa_merchant_id: '',
     esewa_secret_key: '',
+    home_hero_title: 'Book flights across Nepal with ease',
+    home_hero_subtitle: 'Affordable fares, fast booking and instant confirmations',
+    footer_text: '© Nepal International Air Ticketing',
+    dashboard_announcement: '',
   });
 
   useEffect(() => {
@@ -93,6 +97,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
           site_phone: data.site_phone || '+977-1-1234567',
           esewa_merchant_id: data.esewa_merchant_id || '',
           esewa_secret_key: data.esewa_secret_key || '',
+          home_hero_title: data.home_hero_title || 'Book flights across Nepal with ease',
+          home_hero_subtitle: data.home_hero_subtitle || 'Affordable fares, fast booking and instant confirmations',
+          footer_text: data.footer_text || '© Nepal International Air Ticketing',
+          dashboard_announcement: data.dashboard_announcement || '',
         });
       }
     } catch (err: any) {
@@ -125,6 +133,10 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
         site_phone: settings.site_phone.trim(),
         esewa_merchant_id: settings.esewa_merchant_id.trim(),
         esewa_secret_key: settings.esewa_secret_key.trim(),
+        home_hero_title: settings.home_hero_title?.trim() || null,
+        home_hero_subtitle: settings.home_hero_subtitle?.trim() || null,
+        footer_text: settings.footer_text?.trim() || null,
+        dashboard_announcement: settings.dashboard_announcement?.trim() || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -318,7 +330,12 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
             </div>
 
             <div>
-              <p className="text-sm text-slate-700">Exchange rates are now fetched in real-time via the system API and cannot be edited here.</p>
+              <label className="mb-2 block text-sm font-semibold text-slate-700">Home Hero Title</label>
+              <input value={settings.home_hero_title} onChange={(e)=>handleChange('home_hero_title', e.target.value)} disabled={!isEditing || loading || initialLoading} className="w-full rounded-2xl border border-slate-300 py-3 px-4 text-slate-900" />
+              <label className="mb-2 block mt-3 text-sm font-semibold text-slate-700">Home Hero Subtitle</label>
+              <input value={settings.home_hero_subtitle} onChange={(e)=>handleChange('home_hero_subtitle', e.target.value)} disabled={!isEditing || loading || initialLoading} className="w-full rounded-2xl border border-slate-300 py-3 px-4 text-slate-900" />
+              <label className="mb-2 block mt-3 text-sm font-semibold text-slate-700">Dashboard Announcement</label>
+              <textarea value={settings.dashboard_announcement} onChange={(e)=>handleChange('dashboard_announcement', e.target.value)} disabled={!isEditing || loading || initialLoading} className="w-full rounded-2xl border border-slate-300 py-3 px-4 text-slate-900 min-h-[80px]" />
             </div>
           </section>
 
@@ -470,8 +487,9 @@ const AdminSettings: React.FC<AdminSettingsProps> = ({ onUpdate }) => {
             <h3 className="text-lg font-bold text-slate-900">Configuration Summary</h3>
             <div className="mt-6 space-y-4">
               <div className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Exchange Rate</p>
-                <p className="mt-1 text-base font-bold text-slate-900">1 USD = रू {exchangeRatePreview ? exchangeRatePreview.toFixed(2) : '—'} NPR</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Home Hero</p>
+                <p className="mt-1 text-base font-bold text-slate-900">{settings.home_hero_title}</p>
+                <p className="text-sm text-slate-700">{settings.home_hero_subtitle}</p>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Site Name</p>
