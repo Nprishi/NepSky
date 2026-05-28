@@ -12,6 +12,7 @@ import {
   Clock,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import Swal from "sweetalert2";
 import AdminKeyGate from "./AdminKeyGate";
 import { useLanguage } from "../contexts/LanguageContext";
 
@@ -116,11 +117,26 @@ const BookingManagement = () => {
     newStatus: string,
     booking: BookingData,
   ) => {
-    // Check if trying to cancel without user request
+    // Prevent admin from cancelling without a user request
     if (newStatus === "cancelled" && !booking.cancelled_by_user) {
-      alert(
-        "Cannot cancel booking! Only user can request cancellation from their side.",
-      );
+      await Swal.fire({
+        icon: "warning",
+        title: "Cannot cancel booking",
+        text: "Only user can request cancellation from their side.",
+      });
+      return;
+    }
+
+    // Do not allow admin to set booking to confirmed/completed if user cancelled
+    if (
+      booking.cancelled_by_user &&
+      (newStatus === "confirmed" || newStatus === "completed")
+    ) {
+      await Swal.fire({
+        icon: "warning",
+        title: "Action not allowed",
+        text: "Cannot change status to 'confirmed' or 'completed' because the booking was cancelled by the user.",
+      });
       return;
     }
 
