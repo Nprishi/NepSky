@@ -16,3 +16,7 @@ dist/
 # OS files
 .DS_Store
 Thumbs.dbgit 
+
+#Others Files
+Header.txt
+Header2.txt

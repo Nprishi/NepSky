@@ -1,25 +1,38 @@
-import React, { useEffect, useState } from 'react';
-import Swal from 'sweetalert2';
-import { Search, Users, Send, User, CheckSquare } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import AdminKeyGate from './AdminKeyGate';
-import { useAdmin } from '../contexts/AdminContext';
+import React, { useEffect, useState } from "react";
+import Swal from "sweetalert2";
+import { Search, Send, Users, UserCheck } from "lucide-react";
 
-type RecipientMode = 'all' | 'specific' | 'selected';
+import { supabase } from "../lib/supabase";
+import { useAdmin } from "../contexts/AdminContext";
+import AdminKeyGate from "./AdminKeyGate";
+
+type RecipientMode = "all" | "specific" | "selected";
+
+interface UserType {
+  id: string;
+  full_name: string;
+  email: string;
+}
 
 const NotificationsManagement: React.FC = () => {
   const { admin } = useAdmin();
-  const [users, setUsers] = useState<any[]>([]);
-  const [filter, setFilter] = useState('');
-  const [mode, setMode] = useState<RecipientMode>('all');
-  const [specificUser, setSpecificUser] = useState<string | null>(null);
+
+  const [users, setUsers] = useState<UserType[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  const [mode, setMode] = useState<RecipientMode>("all");
+
+  const [specificUser, setSpecificUser] = useState<string>("");
   const [selectedIds, setSelectedIds] = useState<Record<string, boolean>>({});
 
-  const [title, setTitle] = useState('');
-  const [about, setAbout] = useState('');
-  const [description, setDescription] = useState('');
-  const [scheduledAt, setScheduledAt] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState("");
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [about, setAbout] = useState("");
+  const [type, setType] = useState("info");
+
+  const [scheduledAt, setScheduledAt] = useState("");
 
   useEffect(() => {
     loadUsers();
@@ -27,184 +40,376 @@ const NotificationsManagement: React.FC = () => {
 
   const loadUsers = async () => {
     const { data, error } = await supabase
-      .from('users')
-      .select('id, full_name, email')
-      .order('full_name', { ascending: true });
+      .from("users")
+      .select("id, full_name, email")
+      .order("full_name", { ascending: true });
 
     if (error) {
-      console.error('Failed to load users', error);
+      console.error(error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Failed",
+        text: "Could not load users",
+      });
+
       return;
     }
+
     setUsers(data || []);
   };
 
   const toggleSelect = (id: string) => {
-    setSelectedIds((s) => ({ ...s, [id]: !s[id] }));
+    setSelectedIds((prev) => ({
+      ...prev,
+      [id]: !prev[id],
+    }));
   };
 
-  const recipientCount = async (): Promise<number> => {
-    if (mode === 'all') {
-      const { count } = await supabase.from('users').select('id', { count: 'exact', head: true });
-      return count || 0;
-    }
-    if (mode === 'specific') return specificUser ? 1 : 0;
-    return Object.values(selectedIds).filter(Boolean).length;
-  };
-
-  const verifyAdminKey = async (): Promise<boolean> => {
-    const expected = (import.meta.env.VITE_SUPABASE_ANON_KEY ?? '').toString().trim();
-    if (!expected) {
-      await Swal.fire({ icon: 'error', title: 'Config error', text: 'Admin key not configured.' });
-      return false;
-    }
-
-    const { value, isConfirmed } = await Swal.fire({
-      title: 'Confirm admin key',
-      input: 'password',
-      inputAttributes: { autocomplete: 'new-password', name: 'admin_key', autocapitalize: 'off', spellcheck: 'false' },
-      inputPlaceholder: 'Supabase anon key',
-      showCancelButton: true,
-      confirmButtonText: 'Verify',
-      preConfirm: (v: string) => {
-        const trimmed = typeof v === 'string' ? v.trim() : '';
-        if (!trimmed) Swal.showValidationMessage('Key is required');
-        return trimmed;
-      },
-    });
-
-    if (!isConfirmed) return false;
-    if ((value as string).toString().trim() !== expected) {
-      await Swal.fire({ icon: 'error', title: 'Access denied', text: 'Invalid admin key' });
-      return false;
-    }
-
-    sessionStorage.setItem('supabase_key_verified', 'true');
-    return true;
+  const clearForm = () => {
+    setTitle("");
+    setDescription("");
+    setAbout("");
+    setType("info");
+    setSpecificUser("");
+    setSelectedIds({});
+    setScheduledAt("");
   };
 
   const handleSend = async () => {
-    if (!title.trim()) return Swal.fire({ icon: 'warning', title: 'Missing title', text: 'Please enter event title' });
-    if (!description.trim()) return Swal.fire({ icon: 'warning', title: 'Missing description', text: 'Please enter event description' });
+    if (!title.trim()) {
+      return Swal.fire({
+        icon: "warning",
+        title: "Title Required",
+        text: "Please enter notification title",
+      });
+    }
 
-    const ok = await verifyAdminKey();
-    if (!ok) return;
+    if (!description.trim()) {
+      return Swal.fire({
+        icon: "warning",
+        title: "Description Required",
+        text: "Please enter notification description",
+      });
+    }
 
     setLoading(true);
+
     try {
       let targets: string[] = [];
 
-      if (mode === 'all') {
-        const { data } = await supabase.from('users').select('id');
-        targets = (data || []).map((u: any) => u.id);
-      } else if (mode === 'specific') {
-        if (specificUser) targets = [specificUser];
-      } else {
-        targets = Object.entries(selectedIds).filter(([,v]) => v).map(([k]) => k);
+      // ALL USERS
+      if (mode === "all") {
+        const { data, error } = await supabase.from("users").select("id");
+
+        if (error) throw error;
+
+        targets = (data || []).map((u) => u.id);
       }
 
-      if (!targets || targets.length === 0) {
-        await Swal.fire({ icon: 'warning', title: 'No recipients', text: 'Please select one or more recipients.' });
-        setLoading(false);
-        return;
+      // SPECIFIC USER
+      else if (mode === "specific") {
+        if (!specificUser) {
+          setLoading(false);
+
+          return Swal.fire({
+            icon: "warning",
+            title: "Select User",
+            text: "Please select a user",
+          });
+        }
+
+        targets = [specificUser];
       }
 
-      const now = new Date().toISOString();
-      const scheduled = scheduledAt ? new Date(scheduledAt).toISOString() : now;
+      // SELECTED USERS
+      else {
+        targets = Object.entries(selectedIds)
+          .filter(([, value]) => value)
+          .map(([key]) => key);
+
+        if (targets.length === 0) {
+          setLoading(false);
+
+          return Swal.fire({
+            icon: "warning",
+            title: "No Users Selected",
+            text: "Please select at least one user",
+          });
+        }
+      }
 
       const rows = targets.map((userId) => ({
         user_id: userId,
         title: title.trim(),
         body: description.trim(),
+        type,
         about: about || null,
-        scheduled_at: scheduled,
-        created_at: now,
+        scheduled_at: scheduledAt
+          ? new Date(scheduledAt).toISOString()
+          : new Date().toISOString(),
         sent_by: admin?.id || null,
-        read: false,
+        is_read: false,
       }));
 
-      const { error } = await supabase.from('notifications').insert(rows);
+      const { error } = await supabase.from("notifications").insert(rows);
+
       if (error) {
-        console.error('Failed to insert notifications', error);
-        await Swal.fire({ icon: 'error', title: 'Failed', text: error.message || 'Could not send notifications' });
-        setLoading(false);
-        return;
+        console.error(error);
+
+        return Swal.fire({
+          icon: "error",
+          title: "Failed",
+          text: error.message,
+        });
       }
 
-      await Swal.fire({ icon: 'success', title: 'Sent', text: `Notifications queued for ${rows.length} users.` });
-      // reset
-      setTitle('');
-      setDescription('');
-      setAbout('');
-      setScheduledAt(null);
-      setSelectedIds({});
-      setSpecificUser(null);
-      loadUsers();
+      Swal.fire({
+        icon: "success",
+        title: "Success",
+        text: `Notification sent to ${rows.length} users`,
+      });
+
+      clearForm();
     } catch (err: any) {
       console.error(err);
-      await Swal.fire({ icon: 'error', title: 'Error', text: err?.message || String(err) });
+
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: err.message || "Something went wrong",
+      });
     } finally {
       setLoading(false);
     }
   };
 
+  const filteredUsers = users.filter((u) =>
+    `${u.full_name} ${u.email}`.toLowerCase().includes(filter.toLowerCase()),
+  );
+
   return (
     <AdminKeyGate>
       <div className="space-y-6">
-        <div className="bg-white rounded-lg shadow p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-2xl font-bold">Send Notification</h2>
-            <div className="text-sm text-gray-500">Use this panel to send alerts to users</div>
-          </div>
+        <div className="bg-white rounded-2xl shadow-md p-6">
+          {/* HEADER */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold">Notification Management</h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
-              <input className="w-full rounded-lg border px-4 py-2" placeholder="Event title" value={title} onChange={(e)=>setTitle(e.target.value)} />
-              <textarea className="w-full rounded-lg border px-4 py-2 min-h-[120px]" placeholder="Event description" value={description} onChange={(e)=>setDescription(e.target.value)} />
-              <input className="w-full rounded-lg border px-4 py-2" placeholder="About (optional)" value={about} onChange={(e)=>setAbout(e.target.value)} />
+              <p className="text-sm text-gray-500 mt-1">
+                Send notifications to users
+              </p>
             </div>
 
-            <div className="space-y-4">
-              <label className="block text-sm font-semibold">Recipients</label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2"><input type="radio" checked={mode==='all'} onChange={()=>setMode('all')} /> All users</label>
-                <label className="flex items-center gap-2"><input type="radio" checked={mode==='specific'} onChange={()=>setMode('specific')} /> Specific user</label>
-                <label className="flex items-center gap-2"><input type="radio" checked={mode==='selected'} onChange={()=>setMode('selected')} /> Selected users</label>
+            <div className="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-medium">
+              Admin Panel
+            </div>
+          </div>
+
+          {/* MAIN GRID */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* LEFT */}
+            <div className="lg:col-span-2 space-y-4">
+              {/* TITLE */}
+              <div>
+                <label className="block text-sm font-semibold mb-1">
+                  Notification Title
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Enter notification title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
               </div>
 
-              {mode === 'specific' && (
-                <select className="w-full rounded-lg border px-3 py-2" value={specificUser||''} onChange={(e)=>setSpecificUser(e.target.value||null)}>
-                  <option value="">Select user</option>
-                  {users.map(u=> <option key={u.id} value={u.id}>{u.full_name || u.email}</option>)}
+              {/* DESCRIPTION */}
+              <div>
+                <label className="block text-sm font-semibold mb-1">
+                  Description
+                </label>
+
+                <textarea
+                  placeholder="Enter notification message..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full border rounded-xl px-4 py-3 min-h-[140px] focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* ABOUT */}
+              <div>
+                <label className="block text-sm font-semibold mb-1">
+                  About (Optional)
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="About notification"
+                  value={about}
+                  onChange={(e) => setAbout(e.target.value)}
+                  className="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              {/* TYPE */}
+              <div>
+                <label className="block text-sm font-semibold mb-1">
+                  Notification Type
+                </label>
+
+                <select
+                  value={type}
+                  onChange={(e) => setType(e.target.value)}
+                  className="w-full border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="info">Info</option>
+                  <option value="success">Success</option>
+                  <option value="warning">Warning</option>
+                  <option value="error">Error</option>
                 </select>
+              </div>
+            </div>
+
+            {/* RIGHT */}
+            <div className="space-y-5">
+              {/* RECIPIENTS */}
+              <div>
+                <label className="block text-sm font-semibold mb-3">
+                  Recipients
+                </label>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={mode === "all"}
+                      onChange={() => setMode("all")}
+                    />
+                    <Users className="w-4 h-4" />
+                    All Users
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={mode === "specific"}
+                      onChange={() => setMode("specific")}
+                    />
+                    <UserCheck className="w-4 h-4" />
+                    Specific User
+                  </label>
+
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="radio"
+                      checked={mode === "selected"}
+                      onChange={() => setMode("selected")}
+                    />
+                    <Users className="w-4 h-4" />
+                    Selected Users
+                  </label>
+                </div>
+              </div>
+
+              {/* SPECIFIC USER */}
+              {mode === "specific" && (
+                <div>
+                  <select
+                    value={specificUser}
+                    onChange={(e) => setSpecificUser(e.target.value)}
+                    className="w-full border rounded-xl px-4 py-3"
+                  >
+                    <option value="">Select User</option>
+
+                    {users.map((u) => (
+                      <option key={u.id} value={u.id}>
+                        {u.full_name || u.email}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
 
-              {mode === 'selected' && (
+              {/* SELECTED USERS */}
+              {mode === "selected" && (
                 <div>
-                  <div className="mb-2 flex items-center gap-2">
-                    <Search className="h-4 w-4 text-gray-400" />
-                    <input placeholder="Filter users..." className="flex-1 rounded-lg border px-3 py-2" value={filter} onChange={(e)=>setFilter(e.target.value)} />
+                  {/* SEARCH */}
+                  <div className="flex items-center gap-2 border rounded-xl px-3 py-2 mb-3">
+                    <Search className="w-4 h-4 text-gray-400" />
+
+                    <input
+                      type="text"
+                      placeholder="Search users..."
+                      value={filter}
+                      onChange={(e) => setFilter(e.target.value)}
+                      className="w-full outline-none"
+                    />
                   </div>
-                  <div className="max-h-48 overflow-auto rounded-lg border p-2">
-                    {users.filter(u=> (u.full_name||u.email).toLowerCase().includes(filter.toLowerCase())).map(u=> (
-                      <label key={u.id} className="flex items-center justify-between gap-2 py-1 px-2 hover:bg-gray-50">
-                        <div className="flex items-center gap-2"><input type="checkbox" checked={!!selectedIds[u.id]} onChange={()=>toggleSelect(u.id)} /> <div className="text-sm">{u.full_name || u.email}</div></div>
-                        <div className="text-xs text-gray-400">{u.email}</div>
+
+                  {/* USERS */}
+                  <div className="border rounded-xl max-h-64 overflow-y-auto">
+                    {filteredUsers.map((u) => (
+                      <label
+                        key={u.id}
+                        className="flex items-center justify-between px-3 py-2 border-b hover:bg-gray-50"
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={!!selectedIds[u.id]}
+                            onChange={() => toggleSelect(u.id)}
+                          />
+
+                          <div>
+                            <div className="text-sm font-medium">
+                              {u.full_name}
+                            </div>
+
+                            <div className="text-xs text-gray-500">
+                              {u.email}
+                            </div>
+                          </div>
+                        </div>
                       </label>
                     ))}
                   </div>
                 </div>
               )}
 
+              {/* SCHEDULE */}
               <div>
-                <label className="block text-sm font-semibold">Schedule time (optional)</label>
-                <input type="datetime-local" className="w-full rounded-lg border px-3 py-2" value={scheduledAt||''} onChange={(e)=>setScheduledAt(e.target.value||null)} />
+                <label className="block text-sm font-semibold mb-1">
+                  Schedule Time (Optional)
+                </label>
+
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={(e) => setScheduledAt(e.target.value)}
+                  className="w-full border rounded-xl px-4 py-3"
+                />
               </div>
 
-              <div className="flex gap-2">
-                <button disabled={loading} onClick={handleSend} className="inline-flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg">
-                  <Send className="h-4 w-4" /> Send
+              {/* BUTTONS */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleSend}
+                  disabled={loading}
+                  className="flex-1 bg-blue-600 hover:bg-blue-700 text-white rounded-xl px-4 py-3 flex items-center justify-center gap-2 transition"
+                >
+                  <Send className="w-4 h-4" />
+
+                  {loading ? "Sending..." : "Send"}
                 </button>
-                <button type="button" onClick={()=>{setTitle(''); setDescription(''); setAbout(''); setSelectedIds({}); setSpecificUser(null); setScheduledAt(null);}} className="inline-flex items-center gap-2 bg-gray-200 px-4 py-2 rounded-lg">
+
+                <button
+                  onClick={clearForm}
+                  className="bg-gray-200 hover:bg-gray-300 rounded-xl px-4 py-3 transition"
+                >
                   Clear
                 </button>
               </div>

@@ -1,5 +1,12 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
+import { supabase } from "../lib/supabase";
 import {
   Menu,
   X,
@@ -14,10 +21,11 @@ import {
   Plane,
   Loader2,
 } from "lucide-react";
+
 import { useAuth } from "../contexts/AuthContext";
 
 type NotificationItem = {
-  id: number;
+  id: string;
   title: string;
   message: string;
   time: string;
@@ -28,20 +36,30 @@ const Header: React.FC = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
+  // UI STATES
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isLanguageOpen, setIsLanguageOpen] = useState(false);
   const [isCurrencyOpen, setIsCurrencyOpen] = useState(false);
 
+  // SETTINGS STATES
+
   const [selectedLanguage, setSelectedLanguage] = useState("EN");
   const [selectedCurrency, setSelectedCurrency] = useState("NPR");
 
+  // LOCATION STATES
+
   const [locationName, setLocationName] = useState("Detecting location...");
+
   const [isLocating, setIsLocating] = useState(true);
 
-  // Start with empty notifications; we'll add items only for explicit user actions
+  // NOTIFICATION STATES
+
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+
+  // REFS
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLDivElement>(null);
@@ -49,10 +67,14 @@ const Header: React.FC = () => {
   const currencyRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
+  // UNREAD COUNT
+
   const unreadCount = useMemo(
     () => notifications.filter((item) => !item.read).length,
     [notifications],
   );
+
+  // HELPERS
 
   const handleLogout = () => {
     logout();
@@ -63,6 +85,7 @@ const Header: React.FC = () => {
   const getUserInitials = (firstName?: string, lastName?: string) => {
     const first = firstName?.charAt(0) || "";
     const last = lastName?.charAt(0) || "";
+
     return `${first}${last}`.toUpperCase() || "U";
   };
 
@@ -73,383 +96,317 @@ const Header: React.FC = () => {
       return imagePath;
     }
 
-    // Change this to your backend base URL
     const API_BASE_URL =
       import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
-    return `${API_BASE_URL}${imagePath.startsWith("/") ? imagePath : `/${imagePath}`}`;
+    return `${API_BASE_URL}${
+      imagePath.startsWith("/") ? imagePath : `/${imagePath}`
+    }`;
   };
 
   const userProfileImage = resolveProfileImage(user?.profilePicture);
 
-  const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+  // TEMP NOTIFICATION ADDER
+
+  const addTemporaryNotification = (notification: NotificationItem) => {
+    setNotifications((prev) => {
+      const exists = prev.some((item) => item.id === notification.id);
+      if (exists) return prev;
+
+      return [notification, ...prev];
+    });
   };
 
+  // FETCH FROM DATABASE (SAFE MERGE)
+
+  const fetchNotifications = async () => {
+    if (!user?.id) return;
+
+    const { data, error } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("Failed to fetch notifications:", error);
+      return;
+    }
+
+    const dbNotifications: NotificationItem[] = (data || []).map((n: any) => ({
+      id: n.id, // UUID from DB (string)
+      title: n.title,
+      message: n.body,
+      time: new Date(n.created_at).toLocaleString(),
+      read: n.read ?? false,
+    }));
+
+    setNotifications((prev) => {
+      const tempOnly = prev.filter(
+        (n) => typeof n.id === "string" && n.id.startsWith("temp-"),
+      );
+      const dbIds = new Set(dbNotifications.map((n) => n.id));
+
+      const mergedTemp = tempOnly.filter((t) => !dbIds.has(t.id));
+
+      return [...dbNotifications, ...mergedTemp];
+    });
+  };
+
+  // MARK ALL AS READ
+
+  const markAllAsRead = async () => {
+    setNotifications((prev) => prev.map((item) => ({ ...item, read: true })));
+
+    if (!user?.id) return;
+
+    const { error } = await supabase
+      .from("notifications")
+      .update({ read: true })
+      .eq("user_id", user.id)
+      .eq("read", false);
+
+    if (error) {
+      console.error("Failed to mark notifications as read:", error);
+    }
+  };
+
+  // MAIN EFFECT
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
+    if (!user?.id) return;
 
-      if (profileRef.current && !profileRef.current.contains(target)) {
-        setIsProfileOpen(false);
-      }
+    fetchNotifications();
 
-      if (
-        notificationRef.current &&
-        !notificationRef.current.contains(target)
-      ) {
-        setIsNotificationOpen(false);
-      }
+    // LOGIN NOTIFICATION
 
-      if (languageRef.current && !languageRef.current.contains(target)) {
-        setIsLanguageOpen(false);
-      }
+    const showLogin = sessionStorage.getItem("showLoginNotification");
 
-      if (currencyRef.current && !currencyRef.current.contains(target)) {
-        setIsCurrencyOpen(false);
-      }
-
-      if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
-        if (isMenuOpen) {
-          setIsMenuOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isMenuOpen]);
-
-  // Add notifications created by other components via sessionStorage flags
-  useEffect(() => {
-    // login notification: set by Login component when a user explicitly signs in
-    const showLogin = sessionStorage.getItem('showLoginNotification');
     if (showLogin) {
-      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const now = new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      });
 
-      const getDeviceName = () => {
+      const getDevice = () => {
         const ua = navigator.userAgent;
-        if (ua.includes('Win')) return 'Windows PC';
-        if (ua.includes('Mac')) return 'Macintosh';
-        if (ua.includes('Linux')) return 'Linux Device';
-        if (ua.includes('Android')) return 'Android Phone';
-        if (ua.includes('iPhone')) return 'iPhone';
-        return 'Unknown Device';
+        if (ua.includes("Win")) return "Windows PC";
+        if (ua.includes("Mac")) return "Mac";
+        if (ua.includes("Android")) return "Android";
+        if (ua.includes("iPhone")) return "iPhone";
+        return "Device";
       };
 
       const loginNotification: NotificationItem = {
-        id: Date.now(),
-        title: 'Signed In',
-        message: `Signed in at ${currentTime} on ${getDeviceName()}`,
-        time: 'Just now',
+        id: `temp-login-${Date.now()}`,
+        title: "Signed In",
+        message: `Signed in at ${now} on ${getDevice()}`,
+        time: "Just now",
         read: false,
       };
 
-      setNotifications((prev) => [loginNotification, ...prev]);
-      sessionStorage.removeItem('showLoginNotification');
+      addTemporaryNotification(loginNotification);
+
+      sessionStorage.removeItem("showLoginNotification");
     }
 
-    // booking completion notification: set by PaymentForm when booking is created
-    const bookingCompleted = sessionStorage.getItem('bookingCompleted');
+    // BOOKING NOTIFICATION
+
+    const bookingCompleted = sessionStorage.getItem("bookingCompleted");
+
     if (bookingCompleted) {
       try {
         const data = JSON.parse(bookingCompleted);
+
         const bookingNotification: NotificationItem = {
-          id: Date.now(),
-          title: 'Booking Confirmed',
-          message: `Booking ${data.pnr || data.bookingId} confirmed — ${data.amount ? '$' + data.amount : ''}`,
-          time: 'Just now',
+          id: `temp-booking-${Date.now()}`,
+          title: "Booking Confirmed",
+          message: `Booking ${data.pnr || data.bookingId} confirmed — ${
+            data.amount ? "$" + data.amount : ""
+          }`,
+          time: "Just now",
           read: false,
         };
 
-        setNotifications((prev) => [bookingNotification, ...prev]);
+        addTemporaryNotification(bookingNotification);
       } catch (err) {
-        console.error('Invalid bookingCompleted payload', err);
+        console.error("Invalid booking data", err);
       } finally {
-        sessionStorage.removeItem('bookingCompleted');
+        sessionStorage.removeItem("bookingCompleted");
       }
     }
 
-    // Listen for immediate events dispatched by other components
-    const onSignedIn = (e: any) => {
-      const email = e?.detail?.email || '';
-      const currentTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const device = navigator.userAgent.includes('Win') ? 'Windows' : 'Device';
-      const loginNotification: NotificationItem = {
-        id: Date.now(),
-        title: 'Signed In',
-        message: `Signed in at ${currentTime} (${email}) on ${device}`,
-        time: 'Just now',
-        read: false,
-      };
+    // REALTIME EVENTS
 
-      setNotifications((prev) => [loginNotification, ...prev]);
+    const onSignedIn = (e: any) => {
+      const email = e?.detail?.email || "";
+
+      addTemporaryNotification({
+        id: `temp-signin-${Date.now()}`,
+        title: "Signed In",
+        message: `Signed in (${email})`,
+        time: "Just now",
+        read: false,
+      });
     };
 
     const onBookingCompleted = (e: any) => {
       const d = e?.detail || {};
-      const bookingNotification: NotificationItem = {
-        id: Date.now(),
-        title: 'Booking Confirmed',
-        message: `Booking ${d.pnr || d.bookingId} confirmed — ${d.amount ? '$' + d.amount : ''}`,
-        time: 'Just now',
+
+      addTemporaryNotification({
+        id: `temp-booking-${Date.now()}`,
+        title: "Booking Confirmed",
+        message: `Booking ${d.pnr || d.bookingId} confirmed`,
+        time: "Just now",
         read: false,
-      };
-      setNotifications((prev) => [bookingNotification, ...prev]);
+      });
     };
 
-    window.addEventListener('app:signedIn', onSignedIn as EventListener);
-    window.addEventListener('app:bookingCompleted', onBookingCompleted as EventListener);
+    window.addEventListener("app:signedIn", onSignedIn);
+    window.addEventListener("app:bookingCompleted", onBookingCompleted);
 
     return () => {
-      window.removeEventListener('app:signedIn', onSignedIn as EventListener);
-      window.removeEventListener('app:bookingCompleted', onBookingCompleted as EventListener);
+      window.removeEventListener("app:signedIn", onSignedIn);
+      window.removeEventListener("app:bookingCompleted", onBookingCompleted);
     };
-  }, [user]);
+  }, [user?.id]);
+
+  // LOCATION DETECTION
 
   useEffect(() => {
-    const detectLocation = async () => {
-      if (!navigator.geolocation) {
-        setLocationName("Location unavailable");
-        setIsLocating(false);
-        return;
-      }
+    const cachedLocation = localStorage.getItem("userLocation");
 
-      navigator.geolocation.getCurrentPosition(
-        async (position) => {
-          try {
-            const { latitude, longitude } = position.coords;
+    if (cachedLocation) {
+      setLocationName(cachedLocation);
+      setIsLocating(false);
+      return;
+    }
 
-            const response = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
-            );
+    if (!navigator.geolocation) {
+      setLocationName("Location unavailable");
 
-            const data = await response.json();
+      setIsLocating(false);
+      return;
+    }
 
-            const city =
-              data.address?.city ||
-              data.address?.town ||
-              data.address?.municipality ||
-              data.address?.village ||
-              data.address?.county ||
-              "Unknown area";
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const { latitude, longitude } = position.coords;
 
-            const country = data.address?.country || "Unknown country";
+          const response = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}`,
+          );
 
-            setLocationName(`${city}, ${country}`);
-          } catch (error) {
-            setLocationName("Location unavailable");
-          } finally {
-            setIsLocating(false);
-          }
-        },
-        () => {
-          setLocationName("Location permission denied");
+          const data = await response.json();
+
+          const city =
+            data.address?.city ||
+            data.address?.town ||
+            data.address?.village ||
+            "Unknown Area";
+
+          const country = data.address?.country || "Unknown Country";
+
+          const finalLocation = `${city}, ${country}`;
+
+          setLocationName(finalLocation);
+
+          localStorage.setItem("userLocation", finalLocation);
+        } catch (error) {
+          setLocationName("Location unavailable");
+        } finally {
           setIsLocating(false);
-        },
-        { enableHighAccuracy: true, timeout: 10000 },
-      );
-    };
+        }
+      },
+      () => {
+        setLocationName("Location permission denied");
 
-    detectLocation();
+        setIsLocating(false);
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+      },
+    );
   }, []);
+
+  // NAVIGATION STYLE
 
   const navLinkClass = ({ isActive }: { isActive: boolean }) =>
     `relative font-medium transition-all duration-200 ${
       isActive ? "text-blue-600" : "text-slate-700 hover:text-blue-600"
     }`;
 
+  // JSX
+
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/75 backdrop-blur-xl shadow-[0_8px_30px_rgba(0,0,0,0.06)]">
-      <div className="hidden lg:block border-b border-slate-200/70 bg-slate-50/80">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex min-h-[42px] items-center justify-between gap-4 text-sm text-slate-600">
-            <div className="flex min-w-0 items-center gap-2 truncate">
-              <MapPin className="h-4 w-4 text-blue-600 shrink-0" />
-              <span className="truncate">
-                {isLocating ? "Detecting your location..." : locationName}
-              </span>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <div className="relative" ref={languageRef}>
-                <button
-                  onClick={() => {
-                    setIsLanguageOpen(!isLanguageOpen);
-                    setIsCurrencyOpen(false);
-                  }}
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 hover:border-blue-200 hover:bg-blue-50 transition"
-                >
-                  <Globe className="h-4 w-4 text-blue-600" />
-                  <span>{selectedLanguage}</span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-
-                {isLanguageOpen && (
-                  <div className="absolute z-10 right-0 mt-2 w-36 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    {["EN", "NP"].map((lang) => (
-                      <button
-                        key={lang}
-                        onClick={() => {
-                          setSelectedLanguage(lang);
-                          setIsLanguageOpen(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left text-sm transition hover:bg-blue-50 ${
-                          selectedLanguage === lang
-                            ? "bg-blue-50 font-semibold text-blue-600"
-                            : "text-slate-700"
-                        }`}
-                      >
-                        {lang === "EN" ? "English" : "Nepali"}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="relative" ref={currencyRef}>
-                <button
-                  onClick={() => {
-                    setIsCurrencyOpen(!isCurrencyOpen);
-                    setIsLanguageOpen(false);
-                  }}
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 hover:border-blue-200 hover:bg-blue-50 transition"
-                >
-                  <span className="font-medium">{selectedCurrency}</span>
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-
-                {isCurrencyOpen && (
-                  <div className="absolute z-10 right-0 mt-2 w-32 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-                    {["NPR", "USD"].map((currency) => (
-                      <button
-                        key={currency}
-                        onClick={() => {
-                          setSelectedCurrency(currency);
-                          setIsCurrencyOpen(false);
-                        }}
-                        className={`w-full px-4 py-3 text-left text-sm transition hover:bg-blue-50 ${
-                          selectedCurrency === currency
-                            ? "bg-blue-50 font-semibold text-blue-600"
-                            : "text-slate-700"
-                        }`}
-                      >
-                        {currency}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main header */}
+    <header className="sticky top-0 z-50 w-full border-b border-white/20 bg-white/75 backdrop-blur-xl shadow-sm">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="flex min-h-[74px] items-center justify-between gap-4">
-          <Link to="/" className="flex min-w-0 items-center gap-3">
-            <div className="relative shrink-0">
-              <img
-                src="/Main-Logo.png"
-                alt="NepSky Logo"
-                className="h-12 w-12 rounded-full object-contain ring-2 ring-blue-100 sm:h-14 sm:w-14"
-              />
-            </div>
+        {/* TOP BAR */}
 
-            <div className="leading-none">
-              <div className="flex items-end">
-                <span className="text-2xl font-extrabold tracking-tight bg-gradient-to-r from-slate-900 via-blue-800 to-blue-500 bg-clip-text text-transparent sm:text-3xl">
-                  Nep
-                </span>
-                <span className="ml-1 text-xl font-bold text-blue-600 sm:text-2xl">
-                  Sky
-                </span>
-              </div>
-              <p className="hidden text-xs text-slate-500 sm:block">
-                International Air Ticketing System
-              </p>
+        <div className="flex min-h-[74px] items-center justify-between gap-4">
+          {/* LOGO */}
+
+          <Link to="/" className="flex items-center gap-3">
+            <img
+              src="/Main-Logo.png"
+              alt="NepSky"
+              className="h-12 w-12 rounded-full object-contain"
+            />
+
+            <div>
+              <h1 className="text-2xl font-bold">NepSky</h1>
+
+              <p className="text-xs text-slate-500">Air Ticketing System</p>
             </div>
           </Link>
 
+          {/* NAVIGATION */}
+
           <nav className="hidden xl:flex items-center gap-8">
             <NavLink to="/flights" className={navLinkClass}>
-              {({ isActive }) => (
-                <span
-                  className={
-                    isActive
-                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
-                      : ""
-                  }
-                >
-                  Flights
-                </span>
-              )}
+              Flights
             </NavLink>
 
             <NavLink to="/my-bookings" className={navLinkClass}>
-              {({ isActive }) => (
-                <span
-                  className={
-                    isActive
-                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
-                      : ""
-                  }
-                >
-                  My Bookings
-                </span>
-              )}
+              My Bookings
             </NavLink>
 
             <NavLink to="/check-in" className={navLinkClass}>
-              {({ isActive }) => (
-                <span
-                  className={
-                    isActive
-                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
-                      : ""
-                  }
-                >
-                  Check-in
-                </span>
-              )}
+              Check-in
             </NavLink>
 
             <NavLink to="/support" className={navLinkClass}>
-              {({ isActive }) => (
-                <span
-                  className={
-                    isActive
-                      ? "after:absolute after:left-0 after:-bottom-2 after:h-[2px] after:w-full after:bg-blue-600"
-                      : ""
-                  }
-                >
-                  Support
-                </span>
-              )}
+              Support
             </NavLink>
           </nav>
 
-          {/* Right side */}
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="hidden md:flex lg:hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 max-w-[220px]">
-              <MapPin className="h-4 w-4 shrink-0 text-blue-600" />
-              <span className="truncate">
-                {isLocating ? "Locating..." : locationName}
-              </span>
+          {/* RIGHT SIDE */}
+
+          <div className="flex items-center gap-3">
+            {/* LOCATION */}
+
+            <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
+              {isLocating ? (
+                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+              ) : (
+                <MapPin className="h-4 w-4 text-blue-600" />
+              )}
+
+              <span>{locationName}</span>
             </div>
 
-            {/* Only show Notifications if user is logged in */}
+            {/* NOTIFICATIONS */}
+
             {user && (
               <div className="relative" ref={notificationRef}>
                 <button
-                  onClick={() => {
-                    setIsNotificationOpen(!isNotificationOpen);
-                    setIsProfileOpen(false);
-                  }}
-                  className="relative rounded-full border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                  onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                  className="relative rounded-full border border-slate-200 bg-white p-2.5"
                 >
                   <Bell className="h-5 w-5" />
+
                   {unreadCount > 0 && (
                     <span className="absolute -right-1 -top-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1 text-[11px] font-bold text-white">
                       {unreadCount}
@@ -458,39 +415,42 @@ const Header: React.FC = () => {
                 </button>
 
                 {isNotificationOpen && (
-                  <div className="absolute right-0 mt-3 w-[320px] sm:w-[360px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                  <div className="absolute right-0 mt-3 w-[350px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
                     <div className="flex items-center justify-between border-b px-4 py-3">
-                      <h3 className="font-semibold text-slate-800">
-                        Notifications
-                      </h3>
+                      <h3 className="font-semibold">Notifications</h3>
+
                       <button
                         onClick={markAllAsRead}
-                        className="text-sm font-medium text-blue-600 hover:text-blue-700"
+                        className="text-sm text-blue-600"
                       >
                         Mark all as read
                       </button>
                     </div>
+
                     <div className="max-h-[360px] overflow-y-auto">
                       {notifications.length > 0 ? (
                         notifications.map((item) => (
                           <div
                             key={item.id}
-                            className={`border-b px-4 py-3 transition hover:bg-slate-50 ${
-                              !item.read ? "bg-blue-50/50" : "bg-white"
+                            className={`border-b px-4 py-3 ${
+                              !item.read ? "bg-blue-50/40" : ""
                             }`}
                           >
-                            <div className="flex items-start justify-between gap-3">
+                            <div className="flex justify-between gap-3">
                               <div>
                                 <p className="font-medium text-slate-800">
                                   {item.title}
                                 </p>
+
                                 <p className="mt-1 text-sm text-slate-600">
                                   {item.message}
                                 </p>
+
                                 <p className="mt-2 text-xs text-slate-400">
                                   {item.time}
                                 </p>
                               </div>
+
                               {!item.read && (
                                 <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" />
                               )}
@@ -507,277 +467,94 @@ const Header: React.FC = () => {
                 )}
               </div>
             )}
-          </div>
-          {user ? (
-            <div className="relative" ref={profileRef}>
-              <button
-                onClick={() => {
-                  setIsProfileOpen(!isProfileOpen);
-                  setIsNotificationOpen(false);
-                }}
-                className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1.5 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 sm:px-3"
-              >
-                {userProfileImage ? (
-                  <img
-                    src={userProfileImage}
-                    alt="Profile"
-                    className="h-9 w-9 rounded-full object-cover ring-2 ring-blue-100"
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.display =
-                        "none";
-                    }}
-                  />
-                ) : (
-                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-sky-500 text-sm font-semibold text-white">
-                    {getUserInitials(user.firstName, user.lastName)}
-                  </div>
-                )}
 
-                <div className="hidden text-left sm:block">
-                  <p className="max-w-[120px] truncate text-sm font-semibold text-slate-800">
-                    {user.firstName} {user.lastName}
-                  </p>
-                  <p className="max-w-[120px] truncate text-xs text-slate-500">
-                    Premium Traveler
-                  </p>
-                </div>
+            {/* PROFILE */}
 
-                <ChevronDown className="hidden h-4 w-4 text-slate-500 sm:block" />
-              </button>
+            {user ? (
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5"
+                >
+                  {userProfileImage ? (
+                    <img
+                      src={userProfileImage}
+                      alt="Profile"
+                      className="h-9 w-9 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+                      {getUserInitials(user.firstName, user.lastName)}
+                    </div>
+                  )}
 
-              {isProfileOpen && (
-                <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                  <div className="border-b bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-4 text-white">
-                    <div className="flex items-center gap-3">
-                      {userProfileImage ? (
-                        <img
-                          src={userProfileImage}
-                          alt="Profile"
-                          className="h-12 w-12 rounded-full object-cover ring-2 ring-white/40"
-                        />
-                      ) : (
-                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 text-base font-bold">
-                          {getUserInitials(user.firstName, user.lastName)}
-                        </div>
-                      )}
+                  <ChevronDown className="h-4 w-4" />
+                </button>
 
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p className="truncate text-sm text-blue-50">
-                          {user.email}
-                        </p>
-                      </div>
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="p-2">
+                      <Link
+                        to="/profile"
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-slate-50"
+                      >
+                        <User className="h-4 w-4 text-blue-600" />
+                        Profile
+                      </Link>
+
+                      <Link
+                        to="/settings"
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm hover:bg-slate-50"
+                      >
+                        <Settings className="h-4 w-4 text-blue-600" />
+                        Settings
+                      </Link>
+
+                      <button
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        Logout
+                      </button>
                     </div>
                   </div>
-
-                  <div className="p-2">
-                    <Link
-                      to="/profile"
-                      onClick={() => setIsProfileOpen(false)}
-                      className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-700 transition hover:bg-slate-50"
-                    >
-                      <User className="h-4 w-4 text-blue-600" />
-                      Profile
-                    </Link>
-
-                    <Link
-                      to="/my-bookings"
-                      onClick={() => setIsProfileOpen(false)}
-                      className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-700 transition hover:bg-slate-50"
-                    >
-                      <CreditCard className="h-4 w-4 text-blue-600" />
-                      My Bookings
-                    </Link>
-
-                    <Link
-                      to="/settings"
-                      onClick={() => setIsProfileOpen(false)}
-                      className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm text-slate-700 transition hover:bg-slate-50"
-                    >
-                      <Settings className="h-4 w-4 text-blue-600" />
-                      Settings
-                    </Link>
-
-                    <button
-                      onClick={handleLogout}
-                      className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-sm text-red-600 transition hover:bg-red-50"
-                    >
-                      <LogOut className="h-4 w-4" />
-                      Logout
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="hidden sm:flex items-center gap-3">
-              <Link
-                to="/select-login"
-                className="rounded-full px-4 py-2 font-medium text-slate-700 transition hover:bg-slate-100 hover:text-blue-600"
-              >
-                Login
-              </Link>
-              <Link
-                to="/select-signup"
-                className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-2.5 font-medium text-white shadow-lg shadow-blue-200 transition hover:scale-[1.02] hover:shadow-xl"
-              >
-                <Plane className="h-4 w-4" />
-                Sign Up
-              </Link>
-            </div>
-          )}
-
-          <button
-            onClick={() => setIsMenuOpen(!isMenuOpen)}
-            className="xl:hidden rounded-full border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
-          >
-            {isMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {isMenuOpen && (
-        <div
-          className="xl:hidden border-t border-slate-200 bg-white shadow-2xl"
-          ref={mobileMenuRef}
-        >
-          <div className="mx-auto max-w-7xl px-4 py-4 sm:px-6">
-            {/* Mobile utility row */}
-            <div className="mb-4 grid gap-3 sm:grid-cols-3">
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                {isLocating ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-                ) : (
-                  <MapPin className="h-4 w-4 text-blue-600" />
                 )}
-                <span className="truncate">{locationName}</span>
               </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
-                <span className="font-medium text-slate-600">Language</span>
-                <select
-                  value={selectedLanguage}
-                  onChange={(e) => setSelectedLanguage(e.target.value)}
-                  className="bg-transparent font-semibold text-slate-800 outline-none"
-                >
-                  <option value="EN">English</option>
-                  <option value="NP">Nepali</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm">
-                <span className="font-medium text-slate-600">Currency</span>
-                <select
-                  value={selectedCurrency}
-                  onChange={(e) => setSelectedCurrency(e.target.value)}
-                  className="bg-transparent font-semibold text-slate-800 outline-none"
-                >
-                  <option value="NPR">NPR</option>
-                  <option value="USD">USD</option>
-                </select>
-              </div>
-            </div>
-
-            <nav className="flex flex-col gap-2">
-              <NavLink
-                to="/"
-                onClick={() => setIsMenuOpen(false)}
-                className={({ isActive }) =>
-                  `rounded-2xl px-4 py-3 font-medium transition ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`
-                }
-              >
-                Home
-              </NavLink>
-
-              <NavLink
-                to="/flights"
-                onClick={() => setIsMenuOpen(false)}
-                className={({ isActive }) =>
-                  `rounded-2xl px-4 py-3 font-medium transition ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`
-                }
-              >
-                Flights
-              </NavLink>
-
-              <NavLink
-                to="/my-bookings"
-                onClick={() => setIsMenuOpen(false)}
-                className={({ isActive }) =>
-                  `rounded-2xl px-4 py-3 font-medium transition ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`
-                }
-              >
-                My Bookings
-              </NavLink>
-
-              <NavLink
-                to="/check-in"
-                onClick={() => setIsMenuOpen(false)}
-                className={({ isActive }) =>
-                  `rounded-2xl px-4 py-3 font-medium transition ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`
-                }
-              >
-                Check-in
-              </NavLink>
-
-              <NavLink
-                to="/support"
-                onClick={() => setIsMenuOpen(false)}
-                className={({ isActive }) =>
-                  `rounded-2xl px-4 py-3 font-medium transition ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600"
-                      : "text-slate-700 hover:bg-slate-50"
-                  }`
-                }
-              >
-                Support
-              </NavLink>
-            </nav>
-
-            {!user && (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            ) : (
+              <div className="hidden sm:flex items-center gap-3">
                 <Link
                   to="/select-login"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="rounded-2xl border border-slate-200 px-4 py-3 text-center font-medium text-slate-700 transition hover:bg-slate-50"
+                  className="rounded-full px-4 py-2 font-medium text-slate-700"
                 >
                   Login
                 </Link>
 
                 <Link
                   to="/select-signup"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="rounded-2xl bg-gradient-to-r from-blue-600 to-sky-500 px-4 py-3 text-center font-medium text-white shadow-lg"
+                  className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 px-5 py-2.5 font-medium text-white"
                 >
+                  <Plane className="h-4 w-4" />
                   Sign Up
                 </Link>
               </div>
             )}
+
+            {/* MOBILE MENU */}
+
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="xl:hidden rounded-full border border-slate-200 bg-white p-2.5"
+            >
+              {isMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
           </div>
         </div>
-      )}
+      </div>
     </header>
   );
 };
