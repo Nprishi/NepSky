@@ -67,6 +67,46 @@ const Header: React.FC = () => {
   const currencyRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
+
+      // Profile dropdown
+      if (profileRef.current && !profileRef.current.contains(target)) {
+        setIsProfileOpen(false);
+      }
+
+      // Notification dropdown
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(target)
+      ) {
+        setIsNotificationOpen(false);
+      }
+
+      // Language dropdown
+      if (languageRef.current && !languageRef.current.contains(target)) {
+        setIsLanguageOpen(false);
+      }
+
+      // Currency dropdown
+      if (currencyRef.current && !currencyRef.current.contains(target)) {
+        setIsCurrencyOpen(false);
+      }
+
+      // Mobile menu
+      if (mobileMenuRef.current && !mobileMenuRef.current.contains(target)) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
   // UNREAD COUNT
 
   const unreadCount = useMemo(
@@ -89,13 +129,22 @@ const Header: React.FC = () => {
     return `${first}${last}`.toUpperCase() || "U";
   };
 
+  //Profile Image
+  
   const resolveProfileImage = (imagePath?: string) => {
     if (!imagePath) return null;
 
+    // Base64 image
+    if (imagePath.startsWith("data:image")) {
+      return imagePath;
+    }
+
+    // Already a full URL
     if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
       return imagePath;
     }
 
+    // Backend file path
     const API_BASE_URL =
       import.meta.env.VITE_API_BASE_URL || "http://localhost:5000";
 
@@ -103,6 +152,7 @@ const Header: React.FC = () => {
       imagePath.startsWith("/") ? imagePath : `/${imagePath}`
     }`;
   };
+
 
   const userProfileImage = resolveProfileImage(user?.profilePicture);
 
@@ -151,6 +201,27 @@ const Header: React.FC = () => {
 
       return [...dbNotifications, ...mergedTemp];
     });
+  };
+
+  // MARK SINGLE NOTIFICATION AS READ
+  const markAsRead = async (notificationId: string | number) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notificationId ? { ...n, read: true } : n)),
+    );
+
+    if (
+      typeof notificationId === "string" &&
+      !notificationId.startsWith("temp-")
+    ) {
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read: true })
+        .eq("id", notificationId);
+
+      if (error) {
+        console.error("Failed to mark notification as read:", error);
+      }
+    }
   };
 
   // MARK ALL AS READ
@@ -345,6 +416,18 @@ const Header: React.FC = () => {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* TOP BAR */}
 
+        {/* LOCATION */}
+
+        <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
+          {isLocating ? (
+            <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
+          ) : (
+            <MapPin className="h-4 w-4 text-blue-600" />
+          )}
+
+          <span>{locationName}</span>
+        </div>
+
         <div className="flex min-h-[74px] items-center justify-between gap-4">
           {/* LOGO */}
 
@@ -385,18 +468,6 @@ const Header: React.FC = () => {
           {/* RIGHT SIDE */}
 
           <div className="flex items-center gap-3">
-            {/* LOCATION */}
-
-            <div className="hidden md:flex items-center gap-2 text-sm text-slate-600">
-              {isLocating ? (
-                <Loader2 className="h-4 w-4 animate-spin text-blue-600" />
-              ) : (
-                <MapPin className="h-4 w-4 text-blue-600" />
-              )}
-
-              <span>{locationName}</span>
-            </div>
-
             {/* NOTIFICATIONS */}
 
             {user && (
@@ -432,27 +503,32 @@ const Header: React.FC = () => {
                         notifications.map((item) => (
                           <div
                             key={item.id}
-                            className={`border-b px-4 py-3 ${
+                            onClick={() => {
+                              if (!item.read) {
+                                markAsRead(item.id);
+                              }
+                            }}
+                            className={`cursor-pointer border-b px-4 py-3 transition hover:bg-slate-50 ${
                               !item.read ? "bg-blue-50/40" : ""
                             }`}
                           >
-                            <div className="flex justify-between gap-3">
-                              <div>
-                                <p className="font-medium text-slate-800">
+                            <div className="flex justify-between gap-1">
+                              <div className="mr-3 mb-1">
+                                <p className="font-medium text-slate-800 text-justify mb-2">
                                   {item.title}
                                 </p>
 
-                                <p className="mt-1 text-sm text-slate-600">
+                                <p className="mt-1 text-sm text-slate-600 text-justify mb-5 text-wrap">
                                   {item.message}
                                 </p>
 
-                                <p className="mt-2 text-xs text-slate-400">
+                                <p className="mt-2 text-xs text-slate-400 text-right">
                                   {item.time}
                                 </p>
                               </div>
 
                               {!item.read && (
-                                <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-600" />
+                                <span className="mt-1 h-2.5 w-2.5 rounded-full bg-blue-800" />
                               )}
                             </div>
                           </div>
@@ -474,7 +550,7 @@ const Header: React.FC = () => {
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5"
+                  className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1.5 w-52 hover:bg-slate-50 transition"
                 >
                   {userProfileImage ? (
                     <img
@@ -488,11 +564,46 @@ const Header: React.FC = () => {
                     </div>
                   )}
 
-                  <ChevronDown className="h-4 w-4" />
+                  <div className="flex-1 min-w-0 text-left">
+                    <p className="truncate text-sm font-semibold text-slate-800">
+                      {[user?.firstName, user?.lastName]
+                        .filter(Boolean)
+                        .join(" ") || "Guest User"}
+                    </p>
+                  </div>
+
+                  <ChevronDown
+                    className={`h-4 w-4 text-slate-500 transition-transform ${
+                      isProfileOpen ? "rotate-180" : ""
+                    }`}
+                  />
                 </button>
 
                 {isProfileOpen && (
                   <div className="absolute right-0 mt-3 w-72 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                    <div className="border-b px-4 py-4 flex gap-5">
+                      {userProfileImage ? (
+                        <img
+                          src={userProfileImage}
+                          alt="Profile"
+                          className="h-12 w-12 rounded-full object-cover"
+                          onError={(e) => {
+                            console.log("Failed image:", e.currentTarget.src);
+                          }}
+                        />
+                      ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 text-sm font-semibold text-white">
+                          {getUserInitials(user.firstName, user.lastName)}
+                        </div>
+                      )}
+
+                      <p className="font-semibold text-slate-800 mt-4">
+                        {[user?.firstName, user?.lastName]
+                          .filter(Boolean)
+                          .join(" ")}
+                      </p>
+                    </div>
+
                     <div className="p-2">
                       <Link
                         to="/profile"
@@ -522,6 +633,7 @@ const Header: React.FC = () => {
                 )}
               </div>
             ) : (
+              // login/signup section
               <div className="hidden sm:flex items-center gap-3">
                 <Link
                   to="/select-login"

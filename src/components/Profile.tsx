@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   User,
   Mail,
@@ -12,8 +12,12 @@ import {
   X,
   Trash2,
   Loader2,
-} from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+} from "lucide-react";
+import { useAuth } from "../contexts/AuthContext";
+import ProfileImageUploader from "../components/ProfileImageUploader";
+import ImageCropModal from "../components/ImageCropModal";
+import CameraModal from "../components/CameraModal";
+import Cropper from "react-easy-crop";
 
 type ProfileFormData = {
   firstName: string;
@@ -32,16 +36,16 @@ const Profile: React.FC = () => {
 
   const initialData: ProfileFormData = useMemo(
     () => ({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      email: user?.email || '',
-      phone: user?.phone || '',
-      dateOfBirth: user?.dateOfBirth || '',
-      nationality: user?.nationality || '',
-      passportNumber: user?.passportNumber || '',
-      profilePicture: user?.profilePicture || '',
+      firstName: user?.firstName || "",
+      lastName: user?.lastName || "",
+      email: user?.email || "",
+      phone: user?.phone || "",
+      dateOfBirth: user?.dateOfBirth || "",
+      nationality: user?.nationality || "",
+      passportNumber: user?.passportNumber || "",
+      profilePicture: user?.profilePicture || "",
     }),
-    [user]
+    [user],
   );
 
   const [isEditing, setIsEditing] = useState(false);
@@ -49,26 +53,43 @@ const Profile: React.FC = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, setIsSaving] = useState(false);
 
+  const [showCamera, setShowCamera] = useState(false);
+  const [showCropModal, setShowCropModal] = useState(false);
+
+  const [cropImage, setCropImage] = useState<string | null>(null);
+
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null);
+
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
   useEffect(() => {
     setProfileData(initialData);
   }, [initialData]);
 
+  useEffect(() => {
+    console.log("cropImage", cropImage);
+    console.log("showCropModal", showCropModal);
+  }, [cropImage, showCropModal]);
+
   const countries = [
-    'Nepal',
-    'United States',
-    'United Kingdom',
-    'Canada',
-    'Australia',
-    'Germany',
-    'France',
-    'Japan',
-    'South Korea',
-    'Singapore',
-    'India',
-    'China',
-    'Thailand',
-    'Malaysia',
-    'UAE',
+    "Nepal",
+    "United States",
+    "United Kingdom",
+    "Canada",
+    "Australia",
+    "Germany",
+    "France",
+    "Japan",
+    "South Korea",
+    "Singapore",
+    "India",
+    "China",
+    "Thailand",
+    "Malaysia",
+    "UAE",
   ];
 
   const handleInputChange = (field: keyof ProfileFormData, value: string) => {
@@ -80,24 +101,24 @@ const Profile: React.FC = () => {
     if (errors[field]) {
       setErrors((prev) => ({
         ...prev,
-        [field]: '',
+        [field]: "",
       }));
     }
   };
 
   const validateImageFile = (file: File) => {
     const maxSize = 5 * 1024 * 1024;
-    const allowedTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/webp'];
+    const allowedTypes = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
-      return 'Only JPG, PNG, and WEBP images are allowed';
+      return "Only JPG, PNG, and WEBP images are allowed";
     }
 
     if (file.size > maxSize) {
-      return 'Image size must be less than 5MB';
+      return "Image size must be less than 5MB";
     }
 
-    return '';
+    return "";
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +145,7 @@ const Profile: React.FC = () => {
 
       setErrors((prev) => ({
         ...prev,
-        profilePicture: '',
+        profilePicture: "",
       }));
     };
 
@@ -134,11 +155,11 @@ const Profile: React.FC = () => {
   const handleRemoveImage = () => {
     setProfileData((prev) => ({
       ...prev,
-      profilePicture: '',
+      profilePicture: "",
     }));
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
@@ -146,38 +167,121 @@ const Profile: React.FC = () => {
     const newErrors: Record<string, string> = {};
 
     if (!profileData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = "First name is required";
     }
 
     if (!profileData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = "Last name is required";
     }
 
     if (!profileData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = "Email is required";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(profileData.email)) {
-      newErrors.email = 'Enter a valid email address';
+      newErrors.email = "Enter a valid email address";
     }
 
     if (!profileData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
+      newErrors.phone = "Phone number is required";
     } else if (profileData.phone.trim().length < 7) {
-      newErrors.phone = 'Enter a valid phone number';
+      newErrors.phone = "Enter a valid phone number";
     }
 
     if (profileData.passportNumber && profileData.passportNumber.length < 6) {
-      newErrors.passportNumber = 'Passport number looks too short';
+      newErrors.passportNumber = "Passport number looks too short";
     }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const startCamera = async () => {
+    setShowCamera(true);
+
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: true,
+    });
+
+    if (videoRef.current) {
+      videoRef.current.srcObject = stream;
+      videoRef.current.play();
+    }
+  };
+
+  const takePhoto = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    if (!video || !canvas) return;
+
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    ctx?.drawImage(video, 0, 0);
+
+    const image = canvas.toDataURL("image/jpeg");
+
+    setCropImage(image);
+    setShowCropModal(true);
+    stopCamera();
+  };
+
+  const stopCamera = () => {
+    const video = videoRef.current;
+    const stream = video?.srcObject as MediaStream;
+
+    stream?.getTracks().forEach((t) => t.stop());
+    setShowCamera(false);
+  };
+
+  const createCroppedImage = async (imageSrc: string, cropPixels: any) => {
+    const image = new Image();
+    image.src = imageSrc;
+
+    await new Promise((resolve) => {
+      image.onload = resolve;
+    });
+
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    canvas.width = cropPixels.width;
+    canvas.height = cropPixels.height;
+
+    ctx?.drawImage(
+      image,
+      cropPixels.x,
+      cropPixels.y,
+      cropPixels.width,
+      cropPixels.height,
+      0,
+      0,
+      cropPixels.width,
+      cropPixels.height,
+    );
+
+    return canvas.toDataURL("image/jpeg");
+  };
+
+  const handleCropSave = async () => {
+    if (!cropImage || !croppedAreaPixels) return;
+
+    const cropped = await createCroppedImage(cropImage, croppedAreaPixels);
+
+    setProfileData((prev) => ({
+      ...prev,
+      profilePicture: cropped,
+    }));
+
+    setShowCropModal(false);
+  };
+
   const handleSave = async () => {
     if (!validateForm()) return;
 
     setIsSaving(true);
-    setErrors((prev) => ({ ...prev, general: '' }));
+    setErrors((prev) => ({ ...prev, general: "" }));
 
     try {
       await updateProfile({
@@ -189,7 +293,7 @@ const Profile: React.FC = () => {
     } catch (error) {
       setErrors((prev) => ({
         ...prev,
-        general: 'Failed to update profile. Please try again.',
+        general: "Failed to update profile. Please try again.",
       }));
     } finally {
       setIsSaving(false);
@@ -202,14 +306,14 @@ const Profile: React.FC = () => {
     setIsEditing(false);
 
     if (fileInputRef.current) {
-      fileInputRef.current.value = '';
+      fileInputRef.current.value = "";
     }
   };
 
   const getUserInitials = () => {
-    const first = profileData.firstName?.charAt(0) || '';
-    const last = profileData.lastName?.charAt(0) || '';
-    return `${first}${last}`.toUpperCase() || 'U';
+    const first = profileData.firstName?.charAt(0) || "";
+    const last = profileData.lastName?.charAt(0) || "";
+    return `${first}${last}`.toUpperCase() || "U";
   };
 
   if (!user) {
@@ -223,11 +327,11 @@ const Profile: React.FC = () => {
   }
 
   const inputBaseClass =
-    'w-full rounded-xl border px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400';
+    "w-full rounded-xl border px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400";
   const editableClass =
-    'border-slate-300 bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-100';
+    "border-slate-300 bg-white focus:border-sky-500 focus:ring-4 focus:ring-sky-100";
   const readonlyClass =
-    'border-slate-200 bg-slate-50 text-slate-600 cursor-not-allowed';
+    "border-slate-200 bg-slate-50 text-slate-600 cursor-not-allowed";
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -251,28 +355,25 @@ const Profile: React.FC = () => {
 
                   {isEditing && (
                     <div className="absolute -bottom-2 left-1/2 flex -translate-x-1/2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => fileInputRef.current?.click()}
-                        className="rounded-full bg-sky-600 p-2 text-white shadow-md transition hover:bg-sky-700"
-                        title="Change image"
-                      >
-                        <Camera className="h-4 w-4" />
-                      </button>
+                      <ProfileImageUploader
+                        onCameraClick={() => setShowCamera(true)}
+                        onGallerySelect={(image) => {
+                          setCropImage(image);
+                          setShowCropModal(true);
+                        }}
+                      />
 
                       {profileData.profilePicture && (
                         <button
                           type="button"
                           onClick={handleRemoveImage}
-                          className="rounded-full bg-rose-600 p-2 text-white shadow-md transition hover:bg-rose-700"
-                          title="Remove image"
+                          className="rounded-full bg-rose-600 p-2 text-white"
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
                       )}
                     </div>
                   )}
-
                   <input
                     ref={fileInputRef}
                     type="file"
@@ -284,10 +385,15 @@ const Profile: React.FC = () => {
 
                 <div className="text-white">
                   <h1 className="text-2xl font-bold sm:text-3xl">
-                    {profileData.firstName || 'Your'} {profileData.lastName || 'Profile'}
+                    {profileData.firstName || "Your"}{" "}
+                    {profileData.lastName || "Profile"}
                   </h1>
-                  <p className="mt-1 text-sm text-sky-100 sm:text-base">{profileData.email}</p>
-                  <p className="text-sm text-sky-100 sm:text-base">{profileData.phone}</p>
+                  <p className="mt-1 text-sm text-sky-100 sm:text-base">
+                    {profileData.email}
+                  </p>
+                  <p className="text-sm text-sky-100 sm:text-base">
+                    {profileData.phone}
+                  </p>
                 </div>
               </div>
 
@@ -366,13 +472,17 @@ const Profile: React.FC = () => {
                       <input
                         type="text"
                         value={profileData.firstName}
-                        onChange={(e) => handleInputChange('firstName', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("firstName", e.target.value)
+                        }
                         disabled={!isEditing}
-                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.firstName ? 'border-rose-300 focus:ring-rose-100' : ''}`}
+                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.firstName ? "border-rose-300 focus:ring-rose-100" : ""}`}
                       />
                     </div>
                     {errors.firstName && (
-                      <p className="mt-1 text-sm text-rose-600">{errors.firstName}</p>
+                      <p className="mt-1 text-sm text-rose-600">
+                        {errors.firstName}
+                      </p>
                     )}
                   </div>
 
@@ -385,13 +495,17 @@ const Profile: React.FC = () => {
                       <input
                         type="text"
                         value={profileData.lastName}
-                        onChange={(e) => handleInputChange('lastName', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("lastName", e.target.value)
+                        }
                         disabled={!isEditing}
-                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.lastName ? 'border-rose-300 focus:ring-rose-100' : ''}`}
+                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.lastName ? "border-rose-300 focus:ring-rose-100" : ""}`}
                       />
                     </div>
                     {errors.lastName && (
-                      <p className="mt-1 text-sm text-rose-600">{errors.lastName}</p>
+                      <p className="mt-1 text-sm text-rose-600">
+                        {errors.lastName}
+                      </p>
                     )}
                   </div>
 
@@ -404,7 +518,9 @@ const Profile: React.FC = () => {
                       <input
                         type="date"
                         value={profileData.dateOfBirth}
-                        onChange={(e) => handleInputChange('dateOfBirth', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("dateOfBirth", e.target.value)
+                        }
                         disabled={!isEditing}
                         className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass}`}
                       />
@@ -419,7 +535,9 @@ const Profile: React.FC = () => {
                       <MapPin className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                       <select
                         value={profileData.nationality}
-                        onChange={(e) => handleInputChange('nationality', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("nationality", e.target.value)
+                        }
                         disabled={!isEditing}
                         className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass}`}
                       >
@@ -450,13 +568,17 @@ const Profile: React.FC = () => {
                       <input
                         type="email"
                         value={profileData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("email", e.target.value)
+                        }
                         disabled={!isEditing}
-                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.email ? 'border-rose-300 focus:ring-rose-100' : ''}`}
+                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.email ? "border-rose-300 focus:ring-rose-100" : ""}`}
                       />
                     </div>
                     {errors.email && (
-                      <p className="mt-1 text-sm text-rose-600">{errors.email}</p>
+                      <p className="mt-1 text-sm text-rose-600">
+                        {errors.email}
+                      </p>
                     )}
                   </div>
 
@@ -469,13 +591,17 @@ const Profile: React.FC = () => {
                       <input
                         type="tel"
                         value={profileData.phone}
-                        onChange={(e) => handleInputChange('phone', e.target.value)}
+                        onChange={(e) =>
+                          handleInputChange("phone", e.target.value)
+                        }
                         disabled={!isEditing}
-                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.phone ? 'border-rose-300 focus:ring-rose-100' : ''}`}
+                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.phone ? "border-rose-300 focus:ring-rose-100" : ""}`}
                       />
                     </div>
                     {errors.phone && (
-                      <p className="mt-1 text-sm text-rose-600">{errors.phone}</p>
+                      <p className="mt-1 text-sm text-rose-600">
+                        {errors.phone}
+                      </p>
                     )}
                   </div>
 
@@ -489,15 +615,20 @@ const Profile: React.FC = () => {
                         type="text"
                         value={profileData.passportNumber}
                         onChange={(e) =>
-                          handleInputChange('passportNumber', e.target.value.toUpperCase())
+                          handleInputChange(
+                            "passportNumber",
+                            e.target.value.toUpperCase(),
+                          )
                         }
                         disabled={!isEditing}
                         placeholder="Passport number"
-                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.passportNumber ? 'border-rose-300 focus:ring-rose-100' : ''}`}
+                        className={`${inputBaseClass} pl-11 ${isEditing ? editableClass : readonlyClass} ${errors.passportNumber ? "border-rose-300 focus:ring-rose-100" : ""}`}
                       />
                     </div>
                     {errors.passportNumber && (
-                      <p className="mt-1 text-sm text-rose-600">{errors.passportNumber}</p>
+                      <p className="mt-1 text-sm text-rose-600">
+                        {errors.passportNumber}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -506,13 +637,43 @@ const Profile: React.FC = () => {
 
             {isEditing && (
               <div className="mt-8 rounded-2xl border border-sky-100 bg-sky-50 px-4 py-4 text-sm text-sky-800">
-                Profile image and all editable fields will be sent through your existing
-                <span className="mx-1 font-semibold">updateProfile(profileData)</span>
-                flow. If your current backend already saves these fields, they will persist in the database.
+                Edit Mode Enable:
+                <span className="mx-1 font-semibold">
+                  Insert Your Image.
+                  <p>After changing this information click to save button. </p>
+                </span>
               </div>
             )}
           </div>
         </div>
+
+        {showCamera && (
+          <CameraModal
+            onCapture={(image) => {
+              console.log("Captured image:", image);
+              setCropImage(image);
+              setShowCropModal(true);
+              setShowCamera(false);
+            }}
+            onClose={() => setShowCamera(false)}
+          />
+        )}
+
+        {showCropModal && cropImage && (
+          <ImageCropModal
+            imageSrc={cropImage}
+            crop={crop}
+            zoom={zoom}
+            setCrop={setCrop}
+            setZoom={setZoom}
+            loading={isSaving}
+            onClose={() => setShowCropModal(false)}
+            onSave={handleCropSave}
+            onCropComplete={(_: any, croppedPixels: any) => {
+              setCroppedAreaPixels(croppedPixels);
+            }}
+          />
+        )}
       </div>
     </div>
   );
