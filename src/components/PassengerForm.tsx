@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from "react";
 import {
   User,
   Mail,
@@ -8,10 +8,10 @@ import {
   CreditCard,
   ArrowLeft,
   ArrowRight,
-} from 'lucide-react';
-import { useBooking } from '../contexts/BookingContext';
-import { useAuth } from '../contexts/AuthContext';
-import { Passenger } from '../types';
+} from "lucide-react";
+import { useBooking } from "../contexts/BookingContext";
+import { useAuth } from "../contexts/AuthContext";
+import { Passenger } from "../types";
 
 interface PassengerFormProps {
   onNext: () => void;
@@ -25,8 +25,6 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
   const [formData, setFormData] = useState<Passenger[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-
-
   useEffect(() => {
     if (passengers && passengers.length > 0) {
       setFormData(passengers);
@@ -38,15 +36,15 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
         { length: searchFilters.passengers },
         (_, index) => ({
           id: `passenger-${index + 1}`,
-          title: 'Mr',
-          firstName: index === 0 && user ? user.firstName || '' : '',
-          lastName: index === 0 && user ? user.lastName || '' : '',
-          dateOfBirth: '',
-          nationality: '',
-          passportNumber: '',
-          email: index === 0 && user ? user.email || '' : '',
-          phone: index === 0 && user ? user.phone || '' : '',
-        })
+          title: "Mr",
+          firstName: index === 0 && user ? user.firstName || "" : "",
+          lastName: index === 0 && user ? user.lastName || "" : "",
+          dateOfBirth: "",
+          nationality: "",
+          passportNumber: "",
+          email: index === 0 && user ? user.email || "" : "",
+          phone: index === 0 && user ? user.phone || "" : "",
+        }),
       );
 
       setFormData(initialPassengers);
@@ -56,7 +54,7 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
   const handleInputChange = (
     passengerIndex: number,
     field: keyof Passenger,
-    value: string
+    value: string,
   ) => {
     const updatedPassengers = [...formData];
     updatedPassengers[passengerIndex] = {
@@ -69,44 +67,40 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
 
     const errorKey = `${passengerIndex}-${field}`;
     if (errors[errorKey]) {
-      setErrors((prev) => ({ ...prev, [errorKey]: '' }));
+      setErrors((prev) => ({ ...prev, [errorKey]: "" }));
     }
   };
 
   const validateForm = () => {
     const newErrors: { [key: string]: string } = {};
 
-
-
     formData.forEach((passenger, index) => {
-      
       // FIRST NAME
-  
+
       const firstName = passenger.firstName.trim();
       if (!firstName) {
-        newErrors[`${index}-firstName`] = 'First name is required';
+        newErrors[`${index}-firstName`] = "First name is required";
       } else if (firstName.length < 2) {
-        newErrors[`${index}-firstName`] = 'Too short';
+        newErrors[`${index}-firstName`] = "Too short";
       } else if (!/^[A-Za-z\s'-]+$/.test(firstName)) {
-        newErrors[`${index}-firstName`] = 'Only letters allowed';
+        newErrors[`${index}-firstName`] = "Only letters allowed";
       }
 
       // LAST NAME
-     
+
       const lastName = passenger.lastName.trim();
       if (!lastName) {
-        newErrors[`${index}-lastName`] = 'Last name is required';
+        newErrors[`${index}-lastName`] = "Last name is required";
       } else if (lastName.length < 2) {
-        newErrors[`${index}-lastName`] = 'Too short';
+        newErrors[`${index}-lastName`] = "Too short";
       } else if (!/^[A-Za-z\s'-]+$/.test(lastName)) {
-        newErrors[`${index}-lastName`] = 'Only letters allowed';
+        newErrors[`${index}-lastName`] = "Only letters allowed";
       }
 
-     
       // DATE OF BIRTH (AGE >= 16)
-   
+
       if (!passenger.dateOfBirth) {
-        newErrors[`${index}-dateOfBirth`] = 'Date of birth is required';
+        newErrors[`${index}-dateOfBirth`] = "Date of birth is required";
       } else {
         const dob = new Date(passenger.dateOfBirth);
         const today = new Date();
@@ -120,50 +114,46 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
 
         if (age < 16) {
           newErrors[`${index}-dateOfBirth`] =
-            'Passenger must be at least 16 years old';
+            "Passenger must be at least 16 years old";
         }
       }
 
-     
       // NATIONALITY
-     
+
       const nationality = passenger.nationality.trim();
       if (!nationality) {
-        newErrors[`${index}-nationality`] = 'Nationality is required';
+        newErrors[`${index}-nationality`] = "Nationality is required";
       }
 
-
       // PASSPORT NUMBER
-     
+
       const passport = passenger.passportNumber.trim();
       if (!passport) {
-        newErrors[`${index}-passportNumber`] = 'Passport number is required';
+        newErrors[`${index}-passportNumber`] = "Passport number is required";
       } else if (passport.length < 6) {
-        newErrors[`${index}-passportNumber`] = 'Too short';
+        newErrors[`${index}-passportNumber`] = "Too short";
       } else if (passport.length > 9) {
-        newErrors[`${index}-passportNumber`] = 'Too long';
+        newErrors[`${index}-passportNumber`] = "Too long";
       } else if (!/^[A-Za-z0-9]+$/.test(passport)) {
         newErrors[`${index}-passportNumber`] =
-          'Only letters and numbers allowed';
+          "Only letters and numbers allowed";
       }
       // EMAIL
       const email = passenger.email.trim();
       if (!email) {
-        newErrors[`${index}-email`] = 'Email is required';
+        newErrors[`${index}-email`] = "Email is required";
       } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        newErrors[`${index}-email`] = 'Invalid email';
+        newErrors[`${index}-email`] = "Invalid email";
       }
 
-    
       // PHONE (NEPAL FORMAT)
-    
-      let phone = passenger.phone.replace(/[\s-]/g, '');
+
+      let phone = passenger.phone.replace(/[\s-]/g, "");
 
       if (!phone) {
-        newErrors[`${index}-phone`] = 'Phone number is required';
+        newErrors[`${index}-phone`] = "Phone number is required";
       } else if (!/^(?:\+977|977)?9[78]\d{8}$/.test(phone)) {
-        newErrors[`${index}-phone`] =
-          'Enter valid number (+97798XXXXXXXX)';
+        newErrors[`${index}-phone`] = "Enter valid number (+97798XXXXXXXX)";
       }
     });
 
@@ -181,21 +171,21 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
   };
 
   const countries = [
-    'Nepal',
-    'United States',
-    'United Kingdom',
-    'Canada',
-    'Australia',
-    'Germany',
-    'France',
-    'Japan',
-    'South Korea',
-    'Singapore',
-    'India',
-    'China',
-    'Thailand',
-    'Malaysia',
-    'UAE',
+    "Nepal",
+    "United States",
+    "United Kingdom",
+    "Canada",
+    "Australia",
+    "Germany",
+    "France",
+    "Japan",
+    "South Korea",
+    "Singapore",
+    "India",
+    "China",
+    "Thailand",
+    "Malaysia",
+    "UAE",
   ];
 
   if (!searchFilters && (!passengers || passengers.length === 0)) {
@@ -237,7 +227,7 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
             className="rounded-2xl border border-gray-200 bg-gray-50 p-4 sm:p-6"
           >
             <h3 className="mb-4 text-lg font-semibold text-gray-900">
-              Passenger {index + 1} {index === 0 && '(Primary Contact)'}
+              Passenger {index + 1} {index === 0 && "(Primary Contact)"}
             </h3>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
@@ -249,7 +239,7 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                 <select
                   value={passenger.title}
                   onChange={(e) =>
-                    handleInputChange(index, 'title', e.target.value)
+                    handleInputChange(index, "title", e.target.value)
                   }
                   className="w-full rounded-xl border border-gray-300 px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-primary-500"
                 >
@@ -271,12 +261,13 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                     type="text"
                     value={passenger.firstName}
                     onChange={(e) =>
-                      handleInputChange(index, 'firstName', e.target.value)
+                      handleInputChange(index, "firstName", e.target.value)
                     }
-                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors[`${index}-firstName`]
-                      ? 'border-red-300'
-                      : 'border-gray-300'
-                      }`}
+                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      errors[`${index}-firstName`]
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
                     placeholder="First name"
                   />
                 </div>
@@ -298,12 +289,13 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                     type="text"
                     value={passenger.lastName}
                     onChange={(e) =>
-                      handleInputChange(index, 'lastName', e.target.value)
+                      handleInputChange(index, "lastName", e.target.value)
                     }
-                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors[`${index}-lastName`]
-                      ? 'border-red-300'
-                      : 'border-gray-300'
-                      }`}
+                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      errors[`${index}-lastName`]
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
                     placeholder="Last name"
                   />
                 </div>
@@ -319,38 +311,56 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                 <label className="mb-1 block text-sm font-medium text-gray-700">
                   Date of Birth
                 </label>
+
                 <div className="relative">
-                  <Calendar className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  {/* /* Inside your Date of Birth input */}
+                  <Calendar className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 z-10" />
+
                   <input
                     type="date"
+                    className="w-full rounded-md border border-gray-300 py-2 pl-10 pr-3 text-sm focus:border-blue-500 focus:outline-none"
                     value={passenger.dateOfBirth}
-                    onChange={(e) => handleInputChange(index, 'dateOfBirth', e.target.value)}
-                    // Prevent future dates and set a reasonable limit (e.g., 100 years ago)
-                    min={new Date(new Date().setFullYear(new Date().getFullYear() - 100)).toISOString().split('T')[0]}
-                    max={new Date().toISOString().split('T')[0]}
-                    className={`...`}
+                    onChange={(e) =>
+                      handleInputChange(index, "dateOfBirth", e.target.value)
+                    }
+                    min={
+                      new Date(
+                        new Date().setFullYear(new Date().getFullYear() - 120),
+                      )
+                        .toISOString()
+                        .split("T")[0]
+                    }
+                    max={new Date().toISOString().split("T")[0]}
                   />
                 </div>
+
                 {errors[`${index}-dateOfBirth`] && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors[`${index}-dateOfBirth`]}
                   </p>
                 )}
               </div>
-
               {/* Nationality */}
-              {/* Replace the current Nationality select with this logic if you want consistency */}
+
               <div className="relative">
-                <MapPin className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-gray-700">
+                    Nationality
+                  </label>
+                </div>
+                <MapPin className="absolute left-3 top-10 h-4 w-4 text-gray-400" />
                 <input
                   type="text"
                   placeholder="Search country..."
                   value={passenger.nationality}
-                  onChange={(e) => handleInputChange(index, 'nationality', e.target.value)}
+                  onChange={(e) =>
+                    handleInputChange(index, "nationality", e.target.value)
+                  }
                   list={`countries-${index}`} // Uses a native datalist for simple autocomplete
-                  className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors[`${index}-nationality`] ? 'border-red-300' : 'border-gray-300'
-                    }`}
+                  className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                    errors[`${index}-nationality`]
+                      ? "border-red-300"
+                      : "border-gray-300"
+                  }`}
                 />
                 <datalist id={`countries-${index}`}>
                   {countries.map((country) => (
@@ -370,12 +380,13 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                     type="text"
                     value={passenger.passportNumber}
                     onChange={(e) =>
-                      handleInputChange(index, 'passportNumber', e.target.value)
+                      handleInputChange(index, "passportNumber", e.target.value)
                     }
-                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors[`${index}-passportNumber`]
-                      ? 'border-red-300'
-                      : 'border-gray-300'
-                      }`}
+                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      errors[`${index}-passportNumber`]
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
                     placeholder="Passport number"
                   />
                 </div>
@@ -397,12 +408,13 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                     type="email"
                     value={passenger.email}
                     onChange={(e) =>
-                      handleInputChange(index, 'email', e.target.value)
+                      handleInputChange(index, "email", e.target.value)
                     }
-                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors[`${index}-email`]
-                      ? 'border-red-300'
-                      : 'border-gray-300'
-                      }`}
+                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      errors[`${index}-email`]
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
                     placeholder="Email address"
                   />
                 </div>
@@ -425,11 +437,17 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                     value={passenger.phone}
                     onChange={(e) => {
                       // Sanitize: allow only numbers, plus sign, and hyphens
-                      const sanitizedValue = e.target.value.replace(/[^\d+-\s]/g, '');
-                      handleInputChange(index, 'phone', sanitizedValue);
+                      const sanitizedValue = e.target.value.replace(
+                        /[^\d+-\s]/g,
+                        "",
+                      );
+                      handleInputChange(index, "phone", sanitizedValue);
                     }}
-                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${errors[`${index}-phone`] ? 'border-red-300' : 'border-gray-300'
-                      }`}
+                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      errors[`${index}-phone`]
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
                     placeholder="+977 98XXXXXXXX"
                   />
                 </div>

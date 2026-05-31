@@ -57,11 +57,11 @@ const CameraModal: React.FC<Props> = ({ onCapture, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[9999] h-full max-h-full flex items-center justify-center bg-black/70">
-      <div className="relative h-full w-full max-w-screen-xl overflow-hidden rounded-2xl bg-black">
-        {/* HEADER */}
-        <div className="flex items-center justify-between bg-black px-4 py-3 text-white">
-          <Camera className="h-4 w-4" />
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black">
+      <div className="relative h-screen w-full overflow-hidden bg-black">
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-4 text-white bg-black">
+          <Camera className="h-5 w-5" />
           <h2 className="font-semibold">Camera</h2>
 
           <button onClick={onClose}>
@@ -69,27 +69,27 @@ const CameraModal: React.FC<Props> = ({ onCapture, onClose }) => {
           </button>
         </div>
 
-        {/* VIDEO */}
-        <div className="relative bg-black">
-          {error ? (
-            <div className="p-10 text-center text-white">{error}</div>
-          ) : (
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              className="h-[850px] w-full object-cover"
-            />
-          )}
-        </div>
+        {/* Camera Preview */}
+        {error ? (
+          <div className="flex h-full items-center justify-center text-white">
+            {error}
+          </div>
+        ) : (
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            className="h-full w-full object-cover"
+          />
+        )}
 
-        {/* ACTIONS */}
-        <div className="flex justify-center gap-4 bg-black ">
+        {/* Capture Button */}
+        <div className="absolute bottom-2 left-0 right-0 flex justify-center">
           <button
             onClick={takePhoto}
-            className="rounded-full bg-white p-4 mt-3 text-black"
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-black shadow-lg"
           >
-            <Camera />
+            <Camera size={28} />
           </button>
         </div>
       </div>
