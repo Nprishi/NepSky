@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS flights (
   total_seats integer NOT NULL DEFAULT 0,
   status text NOT NULL DEFAULT 'scheduled',
   aircraft_type text,
+  flight_type text NOT NULL DEFAULT 'domestic',
   created_at timestamptz DEFAULT now(),
   updated_at timestamptz DEFAULT now()
 );

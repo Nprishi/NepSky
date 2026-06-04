@@ -24,6 +24,7 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
 
   const [formData, setFormData] = useState<Passenger[]>([]);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const flightType = searchFilters?.flightType;
 
   useEffect(() => {
     if (passengers && passengers.length > 0) {
@@ -42,6 +43,7 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
           dateOfBirth: "",
           nationality: "",
           passportNumber: "",
+          nationalId: "",
           email: index === 0 && user ? user.email || "" : "",
           phone: index === 0 && user ? user.phone || "" : "",
         }),
@@ -125,18 +127,45 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
         newErrors[`${index}-nationality`] = "Nationality is required";
       }
 
-      // PASSPORT NUMBER
+      // PASSPORT NUMBER / NATIONAL ID (conditional requirements)
 
-      const passport = passenger.passportNumber.trim();
-      if (!passport) {
-        newErrors[`${index}-passportNumber`] = "Passport number is required";
-      } else if (passport.length < 6) {
-        newErrors[`${index}-passportNumber`] = "Too short";
-      } else if (passport.length > 9) {
-        newErrors[`${index}-passportNumber`] = "Too long";
-      } else if (!/^[A-Za-z0-9]+$/.test(passport)) {
-        newErrors[`${index}-passportNumber`] =
-          "Only letters and numbers allowed";
+      const passport = (passenger.passportNumber || "").trim();
+      const nationalId = (passenger.nationalId || "").trim();
+
+      // Flight type may be provided in searchFilters (Domestic | International)
+      const flightType = searchFilters?.flightType;
+
+      if (flightType === "International") {
+        // Passport required for international flights
+        if (!passport) {
+          newErrors[`${index}-passportNumber`] = "Passport number is required";
+        } else if (passport.length < 6) {
+          newErrors[`${index}-passportNumber`] = "Too short";
+        } else if (passport.length > 9) {
+          newErrors[`${index}-passportNumber`] = "Too long";
+        } else if (!/^[A-Za-z0-9]+$/.test(passport)) {
+          newErrors[`${index}-passportNumber`] =
+            "Only letters and numbers allowed";
+        }
+      } else {
+        // Domestic (or unknown) => National ID / Citizenship required, passport optional
+        if (!nationalId) {
+          newErrors[`${index}-nationalId`] =
+            "Citizenship / National ID is required for domestic flights";
+        } else if (nationalId.length < 3) {
+          newErrors[`${index}-nationalId`] = "Too short";
+        }
+        // Passport can be present but is optional for domestic
+        if (passport) {
+          if (passport.length < 6) {
+            newErrors[`${index}-passportNumber`] = "Too short";
+          } else if (passport.length > 9) {
+            newErrors[`${index}-passportNumber`] = "Too long";
+          } else if (!/^[A-Za-z0-9]+$/.test(passport)) {
+            newErrors[`${index}-passportNumber`] =
+              "Only letters and numbers allowed";
+          }
+        }
       }
       // EMAIL
       const email = passenger.email.trim();
@@ -395,6 +424,39 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                     {errors[`${index}-passportNumber`]}
                   </p>
                 )}
+              </div>
+
+              {/* Citizenship / National ID */}
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700">
+                  Citizenship / National ID
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    value={passenger.nationalId || ""}
+                    onChange={(e) =>
+                      handleInputChange(index, "nationalId", e.target.value)
+                    }
+                    className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
+                      errors[`${index}-nationalId`]
+                        ? "border-red-300"
+                        : "border-gray-300"
+                    }`}
+                    placeholder="Citizenship or national ID number"
+                  />
+                </div>
+                {errors[`${index}-nationalId`] && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors[`${index}-nationalId`]}
+                  </p>
+                )}
+                <p className="mt-1 text-sm text-gray-500">
+                  {flightType === "International"
+                    ? "Passport required for international flights. National ID is optional."
+                    : "National ID required for domestic flights. Passport is optional."}
+                </p>
               </div>
 
               {/* Email */}

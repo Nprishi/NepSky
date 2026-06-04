@@ -44,7 +44,8 @@ export interface Passenger {
   lastName: string;
   dateOfBirth: string;
   nationality: string;
-  passportNumber: string;
+  passportNumber?: string;
+  nationalId?: string;
   email: string;
   phone: string;
 }

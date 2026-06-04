@@ -65,6 +65,14 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
               `%${searchFilters.to}%`,
             );
           }
+          
+          // BUG FIX #2: Always apply flight_type filter (with safe default to 'domestic')
+          const flightType = searchFilters.flightType || "Domestic";
+          if (flightType === "Domestic") {
+            flightQuery = flightQuery.eq("flight_type", "domestic");
+          } else if (flightType === "International") {
+            flightQuery = flightQuery.eq("flight_type", "international");
+          }
         }
 
         const [flightsResponse, airportsResponse] = await Promise.all([
@@ -149,20 +157,7 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
             } as unknown as Flight;
           });
 
-          let finalFlights = mappedFlights;
-          if (searchFilters?.flightType) {
-            if (searchFilters.flightType === "International") {
-              finalFlights = mappedFlights.filter(
-                (mf: any) => (mf as any).isInternational,
-              );
-            } else if (searchFilters.flightType === "Domestic") {
-              finalFlights = mappedFlights.filter(
-                (mf: any) => !(mf as any).isInternational,
-              );
-            }
-          }
-
-          setFlights(finalFlights);
+          setFlights(mappedFlights);
         }
       } catch (error) {
         console.error("Error fetching flight list data:", error);

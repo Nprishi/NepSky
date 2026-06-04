@@ -13,8 +13,9 @@ import {
   Building2,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { Booking } from '../types';
-import { mockFlights } from '../data/mockData';
+import { Booking, Flight } from '../types';
+import { supabase } from '../lib/supabase';
+
 
 type SearchType =
   | 'ticketNumber'
@@ -33,6 +34,7 @@ const CheckIn: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [checkedInPassengers, setCheckedInPassengers] = useState<string[]>([]);
+  const [flight, setFlight] = useState<Flight | null>(null);
 
   const searchOptions = useMemo(
     () => [
@@ -92,8 +94,48 @@ const CheckIn: React.FC = () => {
     }
   };
 
-  const getFlightByBooking = (bookingItem: Booking) => {
-    return mockFlights.find((f) => f.id === bookingItem.flightId);
+  const getFlightByIdFromSupabase = async (flightId: string): Promise<Flight | null> => {
+    try {
+      const { data, error } = await supabase
+        .from('flights')
+        .select('*')
+        .eq('id', flightId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching flight:', error);
+        return null;
+      }
+
+      if (data) {
+        return {
+          id: data.id,
+          flightNumber: data.flight_number,
+          airline: data.airline,
+          from: data.from_location,
+          to: data.to_location,
+          departureTime: data.departure_time,
+          arrivalTime: data.arrival_time,
+          price: Number(data.price),
+          duration: calculateDuration(data.departure_time, data.arrival_time),
+          class: data.class || 'Economy',
+          availableSeats: data.available_seats,
+          aircraft: data.aircraft_type,
+        } as unknown as Flight;
+      }
+
+      return null;
+    } catch (err) {
+      console.error('Error fetching flight from Supabase:', err);
+      return null;
+    }
+  };
+
+  const calculateDuration = (departure: string, arrival: string): string => {
+    const diff = new Date(arrival).getTime() - new Date(departure).getTime();
+    const hours = Math.floor(diff / (1000 * 60 * 60));
+    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+    return `${hours}h ${minutes}m`;
   };
 
   const handleSearch = async () => {
@@ -107,54 +149,82 @@ const CheckIn: React.FC = () => {
     setIsLoading(true);
     setError('');
     setBooking(null);
+    setFlight(null);
     setCheckedInPassengers([]);
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 800));
-
       const allBookings = getBookingsFromStorage();
       let foundBooking: Booking | null = null;
+      let foundFlight: Flight | null = null;
 
-      foundBooking =
-        allBookings.find((b: Booking) => {
-          const flight = getFlightByBooking(b);
+      // Search through bookings
+      for (const b of allBookings) {
+        let matchFound = false;
+        let flightToCheck: Flight | null = null;
 
-          switch (searchType) {
-            case 'ticketNumber': {
-              const ticketNumber = (b as any).ticketNumber;
-              return (
-                normalize(ticketNumber) === normalize(trimmedValue) ||
-                normalize(b.pnr) === normalize(trimmedValue) ||
-                normalize((b as any).id) === normalize(trimmedValue)
-              );
+        switch (searchType) {
+          case 'ticketNumber': {
+            const ticketNumber = (b as any).ticketNumber;
+            if (
+              normalize(ticketNumber) === normalize(trimmedValue) ||
+              normalize(b.pnr) === normalize(trimmedValue) ||
+              normalize((b as any).id) === normalize(trimmedValue)
+            ) {
+              matchFound = true;
             }
-
-            case 'passportNumber':
-              return b.passengers?.some((p: any) =>
-                normalize(p.passportNumber) === normalize(trimmedValue)
-              );
-
-            case 'email':
-              return b.passengers?.some((p: any) =>
-                normalize(p.email) === normalize(trimmedValue)
-              );
-
-            case 'airlineName':
-              return includesText(flight?.airline, trimmedValue);
-
-            case 'source':
-              return includesText(flight?.from, trimmedValue);
-
-            case 'destination':
-              return includesText(flight?.to, trimmedValue);
-
-            default:
-              return false;
+            break;
           }
-        }) || null;
+
+          case 'passportNumber':
+            if (
+              b.passengers?.some((p: any) =>
+                normalize(p.passportNumber) === normalize(trimmedValue)
+              )
+            ) {
+              matchFound = true;
+            }
+            break;
+
+          case 'email':
+            if (
+              b.passengers?.some((p: any) =>
+                normalize(p.email) === normalize(trimmedValue)
+              )
+            ) {
+              matchFound = true;
+            }
+            break;
+
+          case 'airlineName':
+          case 'source':
+          case 'destination':
+            // Fetch flight for these cases
+            flightToCheck = await getFlightByIdFromSupabase(b.flightId);
+            if (flightToCheck) {
+              if (searchType === 'airlineName') {
+                matchFound = includesText(flightToCheck?.airline, trimmedValue);
+              } else if (searchType === 'source') {
+                matchFound = includesText(flightToCheck?.from, trimmedValue);
+              } else if (searchType === 'destination') {
+                matchFound = includesText(flightToCheck?.to, trimmedValue);
+              }
+            }
+            break;
+
+          default:
+            break;
+        }
+
+        if (matchFound) {
+          foundBooking = b;
+          foundFlight = flightToCheck || (await getFlightByIdFromSupabase(b.flightId));
+          break;
+        }
+      }
 
       if (foundBooking) {
         setBooking(foundBooking);
+        setFlight(foundFlight);
 
         const checkedIn = JSON.parse(
           localStorage.getItem(`checkin_${foundBooking.id}`) || '[]'
@@ -165,6 +235,7 @@ const CheckIn: React.FC = () => {
       }
     } catch (err) {
       setError('Failed to search for booking. Please try again.');
+      console.error(err);
     } finally {
       setIsLoading(false);
     }
@@ -187,14 +258,13 @@ const CheckIn: React.FC = () => {
   };
 
   const generateBoardingPass = (passengerId: string) => {
-    if (!booking) return;
+    if (!booking || !flight) return;
 
     const passenger = booking.passengers.find((p) => p.id === passengerId);
-    const flight = mockFlights.find((f) => f.id === booking.flightId);
     const seatIndex = booking.passengers.findIndex((p) => p.id === passengerId);
     const seat = booking.seats?.[seatIndex];
 
-    if (!passenger || !flight) return;
+    if (!passenger) return;
 
     const boardingPassWindow = window.open('', '_blank', 'width=900,height=700');
     if (!boardingPassWindow) {
@@ -450,11 +520,6 @@ const CheckIn: React.FC = () => {
     boardingPassWindow.document.close();
   };
 
-  const getFlightDetails = () => {
-    if (!booking) return null;
-    return mockFlights.find((f) => f.id === booking.flightId);
-  };
-
   const formatTime = (dateString: string) => {
     return new Date(dateString).toLocaleTimeString('en-US', {
       hour: '2-digit',
@@ -471,7 +536,6 @@ const CheckIn: React.FC = () => {
     });
   };
 
-  const flight = getFlightDetails();
   const SelectedIcon = selectedSearchOption?.icon || Search;
 
   return (
