@@ -178,12 +178,12 @@ const Home: React.FC = () => {
     passengers: 1,
     class: "Economy" as "Economy" | "Business" | "First",
     tripType: "one-way" as "one-way" | "round-trip",
-    flightType: "Domestic" as "Domestic" | "International",
+    flightType: "domestic" as "domestic" | "international",
   });
 
   useEffect(() => {
     loadCities();
-  }, [searchData.flightType]);
+  }, []);
 
   const [fromQuery, setFromQuery] = useState("");
   const [toQuery, setToQuery] = useState("");
@@ -201,9 +201,13 @@ const Home: React.FC = () => {
 
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const [cities, setCities] = useState<string[]>([]);
-  const [filteredCities, setFilteredCities] = useState<string[]>([]);
-  const [cityToCountryMap, setCityToCountryMap] = useState<Record<string, string>>({});
+  // const [cities, setCities] = useState<string[]>([]);
+  // const [filteredCities, setFilteredCities] = useState<string[]>([]);
+  const [departureCities, setDepartureCities] = useState<string[]>([]);
+  const [destinationCities, setDestinationCities] = useState<string[]>([]);
+  const [cityToCountryMap, setCityToCountryMap] = useState<
+    Record<string, string>
+  >({});
 
   const { user } = useAuth();
   const { setSearchFilters } = useBooking();
@@ -219,7 +223,7 @@ const Home: React.FC = () => {
       // Updated reliable Pokhara link
       image:
         "https://tse3.mm.bing.net/th/id/OIP.Rc8LeQqbEgenlTZTmkH3bAHaDj?rs=1&pid=ImgDetMain&o=7&rm=3",
-      tags: ["Best Seller", "Domestic"],
+      tags: ["Best Seller", "domestic"],
     },
     {
       id: "rec-2",
@@ -229,7 +233,7 @@ const Home: React.FC = () => {
       discount: "Early Bird",
       image:
         "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?auto=format&fit=crop&q=80&w=400",
-      tags: ["International", "Popular"],
+      tags: ["international", "Popular"],
     },
     {
       id: "rec-3",
@@ -239,7 +243,7 @@ const Home: React.FC = () => {
       discount: "Limited Deal",
       image:
         "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&q=80&w=400",
-      tags: ["Dream Trip"],
+      tags: ["international", "Dream Trip"],
     },
   ];
 
@@ -269,84 +273,94 @@ const Home: React.FC = () => {
 
   const loadCities = async () => {
     try {
-      // BUG FIX #3: Filter flights by current flight_type
-      let flightQuery = supabase.from("flights").select("from_location, to_location, flight_type");
-      
-      if (searchData.flightType === "Domestic") {
+      // 1. Initialize the query against your flights table
+      let flightQuery = supabase
+        .from("flights")
+        .select("from_location, to_location, flight_type");
+
+      // CRITICAL FIX: Match the exact lowercase values in your SQL schema
+      if (searchData.flightType === "domestic") {
         flightQuery = flightQuery.eq("flight_type", "domestic");
-      } else if (searchData.flightType === "International") {
+      } else if (searchData.flightType === "international") {
         flightQuery = flightQuery.eq("flight_type", "international");
       }
 
+      // 2. Execute both queries concurrently
       const [flightsResponse, airportsResponse] = await Promise.all([
         flightQuery,
-        supabase
-          .from("airport")
-          .select("code, name, city, country, latitude, longitude"),
+        supabase.from("airport").select("city, country"),
       ]);
 
-      const { data: flightsData, error: flightsError } = flightsResponse;
-      const { data: airportsData, error: airportsError } = airportsResponse;
+      if (flightsResponse.error) throw flightsResponse.error;
+      if (airportsResponse.error) throw airportsResponse.error;
 
-      if (flightsError) {
-        console.log("Flights error:", flightsError);
-        return;
-      }
-
-      // Build city -> country mapping from airports
+      // 3. Map cities to countries for your domestic/international filtering logic
       const cityCountryMap: Record<string, string> = {};
-      (airportsData || []).forEach((airport: any) => {
+      (airportsResponse.data || []).forEach((airport: any) => {
         if (airport.city && airport.country) {
           cityCountryMap[airport.city.trim()] = airport.country.trim();
         }
       });
 
-      // BUG FIX #1: Add fallback mapping from flights for cities not in airports table
-      (flightsData || []).forEach((flight: any) => {
-        if (flight.from_location && !cityCountryMap[flight.from_location]) {
-          cityCountryMap[flight.from_location] = "Unknown";
+      // 4. Extract separate sets for Departure and Destination locations
+      const departuresSet = new Set<string>();
+      const arrivalsSet = new Set<string>();
+
+      flightsResponse.data?.forEach((flight: any) => {
+        if (flight.from_location) {
+          const fromLoc = flight.from_location.trim();
+          departuresSet.add(fromLoc);
+          if (!cityCountryMap[fromLoc]) cityCountryMap[fromLoc] = "Unknown";
         }
-        if (flight.to_location && !cityCountryMap[flight.to_location]) {
-          cityCountryMap[flight.to_location] = "Unknown";
+        if (flight.to_location) {
+          const toLoc = flight.to_location.trim();
+          arrivalsSet.add(toLoc);
+          if (!cityCountryMap[toLoc]) cityCountryMap[toLoc] = "Unknown";
         }
       });
 
+      // 5. Update your states (Make sure these state hooks exist at the top of your component)
       setCityToCountryMap(cityCountryMap);
-
-      const citySet = new Set<string>();
-      flightsData?.forEach((flight: any) => {
-        if (flight.from_location) citySet.add(flight.from_location);
-        if (flight.to_location) citySet.add(flight.to_location);
-      });
-
-      setCities(Array.from(citySet));
+      setDepartureCities(Array.from(departuresSet));
+      setDestinationCities(Array.from(arrivalsSet));
     } catch (err) {
-      console.error("Error loading cities:", err);
+      console.error("Error inside loadCities execution context:", err);
     }
   };
-  // Helper function to get destination cities based on flight type and departure city
-  const getFilteredDestinationCities = (): string[] => {
-    const departureCountry = searchData.from
-      ? cityToCountryMap[searchData.from]
-      : null;
 
-    if (searchData.flightType === "Domestic") {
-      // For domestic, only show cities in the same country as departure
-      if (!departureCountry) return [];
-      return cities.filter(
-        (city) =>
-          cityToCountryMap[city] === departureCountry &&
-          city !== searchData.from,
-      );
-    } else {
-      // For international, show cities from different countries
-      if (!departureCountry) return cities; // If no departure selected, show all
-      return cities.filter(
-        (city) =>
-          cityToCountryMap[city] !== departureCountry &&
-          city !== searchData.from,
-      );
-    }
+  // Helper function to get destination cities based on flight type and departure city
+  const getFilteredDepartureCities = (): string[] => {
+    return departureCities.filter((city) =>
+      city.toLowerCase().includes(fromQuery.toLowerCase()),
+    );
+  };
+
+  const getFilteredDestinationCities = (): string[] => {
+    if (!searchData.from) return [];
+    const departureCountry = cityToCountryMap[searchData.from];
+
+    return destinationCities.filter((city) => {
+      // Prevent selecting the exact same city for departure and destination
+      if (city === searchData.from) return false;
+
+      // Apply search query text matching
+      if (!city.toLowerCase().includes(toQuery.toLowerCase())) return false;
+
+      const destinationCountry = cityToCountryMap[city];
+      if (
+        !departureCountry ||
+        !destinationCountry ||
+        departureCountry === "Unknown"
+      )
+        return true;
+
+      // Enforce country boundaries based on the toggle state
+      if (searchData.flightType === "domestic") {
+        return departureCountry === destinationCountry;
+      } else {
+        return departureCountry !== destinationCountry;
+      }
+    });
   };
 
   const handleInputChange = (
@@ -377,12 +391,13 @@ const Home: React.FC = () => {
 
     if (!searchData.from) newErrors.from = "Departure city is required";
     if (!searchData.to) newErrors.to = "Destination city is required";
-    if (!searchData.departureDate)
+    if (!searchData.departureDate) {
       newErrors.departureDate = "Departure date is required";
+    }
     if (searchData.tripType === "round-trip" && !searchData.returnDate) {
       newErrors.returnDate = "Return date is required for round trip";
     }
-    if (searchData.from === searchData.to) {
+    if (searchData.from && searchData.to && searchData.from === searchData.to) {
       newErrors.to = "Destination must be different from departure";
     }
 
@@ -395,9 +410,10 @@ const Home: React.FC = () => {
 
     if (!validateSearch()) return;
 
+    // Compile filters cleanly for sessionStorage mapping parameters
     const filters: SearchFilters = {
-      from: searchData.from,
-      to: searchData.to,
+      fromAirportId: searchData.from,
+      toAirportId: searchData.to,
       departureDate: searchData.departureDate,
       returnDate:
         searchData.tripType === "round-trip"
@@ -410,31 +426,34 @@ const Home: React.FC = () => {
     };
 
     setSearchFilters(filters);
-
     sessionStorage.setItem("pendingSearch", JSON.stringify(filters));
-
     navigate("/booking");
   };
-
   const swapCities = () => {
     setSearchData((prev) => {
       const newFrom = prev.to || "";
       const newTo = prev.from || "";
 
-      // Check if swap is valid based on flight type
+      // Sync the string text query states simultaneously
+      setFromQuery(newFrom);
+      setToQuery(newTo);
+
       const fromCountry = cityToCountryMap[newFrom];
       const toCountry = cityToCountryMap[newTo];
 
-      if (prev.flightType === "Domestic" && fromCountry && toCountry) {
-        // For domestic, both cities must be in the same country
+      // Enforce matching bounds safely across your local dictionary catalog
+      if (prev.flightType === "domestic" && fromCountry && toCountry) {
         if (fromCountry !== toCountry) {
-          // Swap would be invalid, clear the destination
+          setToQuery(""); // Instantly empty the destination typing filter context
           return { ...prev, from: newFrom, to: "" };
         }
-      } else if (prev.flightType === "International" && fromCountry && toCountry) {
-        // For international, cities must be in different countries
+      } else if (
+        prev.flightType === "international" &&
+        fromCountry &&
+        toCountry
+      ) {
         if (fromCountry === toCountry) {
-          // Swap would be invalid, clear the destination
+          setToQuery(""); // Instantly empty the destination typing filter context
           return { ...prev, from: newFrom, to: "" };
         }
       }
@@ -580,15 +599,14 @@ const Home: React.FC = () => {
                         />
                         <div
                           className={`flex min-w-[150px] items-center justify-center gap-2 rounded-full 
-                            border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base 
-                            ${
-                              searchData.tripType === "one-way"
-                                ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md"
-                                : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50"
-                            }`}
+                  border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base 
+                  ${
+                    searchData.tripType === "one-way"
+                      ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md"
+                      : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50"
+                  }`}
                         >
                           <ArrowRight className="h-4 w-4" />
-
                           <span className="whitespace-nowrap">One Way</span>
                         </div>
                       </label>
@@ -604,12 +622,12 @@ const Home: React.FC = () => {
                         />
                         <div
                           className={`flex min-w-[160px] items-center justify-center gap-2 rounded-full
-                             border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base 
-                             ${
-                               searchData.tripType === "round-trip"
-                                 ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md"
-                                 : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50"
-                             }`}
+                   border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base 
+                   ${
+                     searchData.tripType === "round-trip"
+                       ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md"
+                       : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50"
+                   }`}
                         >
                           <ArrowRightLeft className="h-4 w-4" />
                           <span className="whitespace-nowrap">Round Trip</span>
@@ -618,46 +636,31 @@ const Home: React.FC = () => {
                     </div>
 
                     {/* Flight Type */}
-                    {
-                      <div className="mb-6 flex flex-wrap gap-4">
-                        <label className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name="flightType"
-                            value="Domestic"
-                            checked={searchData.flightType === "Domestic"}
-                            onChange={handleInputChange}
-                            className="sr-only"
-                          />
-                          <div
-                            className={`flex min-w-[160px] items-center justify-center rounded-full border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base'}
-${
-  searchData.flightType === "Domestic"
-    ? "border-green-600 bg-green-50 text-green-700 shadow-md"
-    : "border-slate-200 bg-white text-slate-600 hover:border-green-300 hover:bg-slate-50"
-}`}
-                          >
-                            Domestic
-                          </div>
-                        </label>
+                    <div className="flex gap-4 my-4">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="flightType"
+                          value="domestic"
+                          checked={searchData.flightType === "domestic"}
+                          onChange={handleInputChange}
+                          className="form-radio text-blue-600"
+                        />
+                        <span>Domestic</span>
+                      </label>
 
-                        <label className="cursor-pointer">
-                          <input
-                            type="radio"
-                            name="flightType"
-                            value="International"
-                            checked={searchData.flightType === "International"}
-                            onChange={handleInputChange}
-                            className="sr-only"
-                          />
-                          <div
-                            className={`flex min-w-[160px] items-center justify-center rounded-full border-2 px-6 py-3 text-sm font-semibold transition-all duration-300 md:text-base ${searchData.flightType === "International" ? "border-blue-600 bg-blue-50 text-blue-700 shadow-md" : "border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:bg-slate-50"}`}
-                          >
-                            International
-                          </div>
-                        </label>
-                      </div>
-                    }
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="flightType"
+                          value="international"
+                          checked={searchData.flightType === "international"}
+                          onChange={handleInputChange}
+                          className="form-radio text-blue-600"
+                        />
+                        <span>International</span>
+                      </label>
+                    </div>
 
                     {/* Top row */}
                     <div className="grid grid-cols-1 gap-5 xl:grid-cols-12">
@@ -671,12 +674,12 @@ ${
                           <input
                             type="text"
                             placeholder="Type city name..."
-                            value={searchData.from || fromQuery}
+                            value={fromQuery}
                             onChange={(e) => {
                               setFromQuery(e.target.value);
                               setSearchData((prev) => ({
                                 ...prev,
-                                from: e.target.value,
+                                from: "", // Invalidate exact selection until confirmed via dropdown click
                                 to: "", // Reset destination when departure changes
                               }));
                               setShowFromSuggestions(true);
@@ -686,32 +689,36 @@ ${
                           />
                         </div>
 
-                        {/* Suggestions Dropdown */}
+                        {/* Departure Suggestions Dropdown */}
                         {showFromSuggestions && fromQuery && (
                           <div className="absolute z-50 mt-2 max-h-60 w-full overflow-auto rounded-xl border border-slate-200 bg-white shadow-2xl backdrop-blur-lg">
-                            {cities
-                              .filter((city) =>
-                                city
-                                  .toLowerCase()
-                                  .includes(fromQuery.toLowerCase()),
-                              )
-                              .map((city) => (
+                            {getFilteredDepartureCities().length > 0 ? (
+                              getFilteredDepartureCities().map((city) => (
                                 <div
                                   key={city}
-                                  className="cursor-pointer px-4 py-3 hover:bg-blue-50 text-slate-700 font-medium transition-colors"
-                                  onClick={() => {
+                                  className="cursor-pointer px-4 py-3 hover:bg-blue-50 text-slate-700 font-medium transition-colors flex justify-between items-center border-b border-slate-50 last:border-none"
+                                  onMouseDown={() => {
                                     setSearchData((prev) => ({
                                       ...prev,
                                       from: city,
-                                      to: "", // Reset destination when departure changes
+                                      to: "", // Reset destination explicitly
                                     }));
                                     setFromQuery(city);
                                     setShowFromSuggestions(false);
                                   }}
                                 >
-                                  {city}
+                                  <span>{city}</span>
+                                  <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-400">
+                                    {cityToCountryMap[city] || "Unknown"}
+                                  </span>
                                 </div>
-                              ))}
+                              ))
+                            ) : (
+                              <div className="px-4 py-3 text-sm text-slate-500 italic">
+                                No operational departure hubs found matching "
+                                {fromQuery}"
+                              </div>
+                            )}
                           </div>
                         )}
                         {errors.from && (
@@ -721,7 +728,7 @@ ${
                         )}
                       </div>
 
-                      {/* Swap */}
+                      {/* Swap Button */}
                       <div className="xl:col-span-2 flex items-center justify-center">
                         <button
                           type="button"
@@ -747,10 +754,14 @@ ${
                             name="to"
                             placeholder="Where to?"
                             autoComplete="off"
-                            value={searchData.to}
+                            value={toQuery}
                             onFocus={() => setShowToSuggestions(true)}
                             onChange={(e) => {
-                              handleInputChange(e);
+                              setToQuery(e.target.value);
+                              setSearchData((prev) => ({
+                                ...prev,
+                                to: "",
+                              }));
                               setShowToSuggestions(true);
                             }}
                             className="w-full bg-transparent text-base font-medium text-slate-900 outline-none md:text-lg placeholder:text-slate-300"
@@ -758,50 +769,38 @@ ${
                         </div>
 
                         {/* Destination Suggestions Dropdown */}
-                        {showToSuggestions && searchData.to && (
+                        {showToSuggestions && toQuery && (
                           <motion.div
                             initial={{ opacity: 0, y: -10 }}
                             animate={{ opacity: 1, y: 0 }}
                             className="absolute z-50 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl"
                           >
-                            {getFilteredDestinationCities()
-                              .filter((city) =>
-                                city
-                                  .toLowerCase()
-                                  .includes(searchData.to.toLowerCase()),
-                              )
-                              .slice(0, 10).length > 0 ? (
-                              getFilteredDestinationCities()
-                                .filter((city) =>
-                                  city
-                                    .toLowerCase()
-                                    .includes(searchData.to.toLowerCase()),
-                                )
-                                .slice(0, 10)
-                                .map((city) => (
-                                  <div
-                                    key={city}
-                                    className="flex items-center gap-3 cursor-pointer px-4 py-3 hover:bg-blue-50 text-slate-700 transition-colors border-b border-slate-50 last:border-none"
-                                    onClick={() => {
-                                      setSearchData((prev) => ({
-                                        ...prev,
-                                        to: city,
-                                      }));
-                                      setShowToSuggestions(false);
-                                    }}
-                                  >
-                                    <MapPin className="h-4 w-4 text-slate-400" />
-                                    <span className="font-medium">{city}</span>
-                                    <span className="ml-auto text-xs text-slate-400">
-                                      {cityToCountryMap[city]}
-                                    </span>
-                                  </div>
-                                ))
+                            {getFilteredDestinationCities().length > 0 ? (
+                              getFilteredDestinationCities().map((city) => (
+                                <div
+                                  key={city}
+                                  className="flex items-center gap-3 cursor-pointer px-4 py-3 hover:bg-blue-50 text-slate-700 transition-colors border-b border-slate-50 last:border-none"
+                                  onMouseDown={() => {
+                                    setSearchData((prev) => ({
+                                      ...prev,
+                                      to: city,
+                                    }));
+                                    setToQuery(city);
+                                    setShowToSuggestions(false);
+                                  }}
+                                >
+                                  <MapPin className="h-4 w-4 text-slate-400" />
+                                  <span className="font-medium">{city}</span>
+                                  <span className="ml-auto text-xs text-slate-400">
+                                    {cityToCountryMap[city] || "Unknown"}
+                                  </span>
+                                </div>
+                              ))
                             ) : (
                               <div className="px-4 py-8 text-center text-slate-500 italic">
                                 {!searchData.from
                                   ? `Select departure city first`
-                                  : `No ${searchData.flightType.toLowerCase()} destinations found matching "${searchData.to}"`}
+                                  : `No ${searchData.flightType.toLowerCase()} destinations found matching "${toQuery}"`}
                               </div>
                             )}
                           </motion.div>
@@ -825,9 +824,7 @@ ${
                             name="departureDate"
                             value={searchData.departureDate}
                             onChange={handleInputChange}
-                            /* Reliable constraint: Cannot book in the past */
                             min={new Date().toISOString().split("T")[0]}
-                            /* Professional constraint: Cannot book more than 1 year (365 days) in the future */
                             max={
                               new Date(
                                 new Date().setFullYear(
@@ -860,12 +857,10 @@ ${
                               name="returnDate"
                               value={searchData.returnDate}
                               onChange={handleInputChange}
-                              /* Reliable constraint: Cannot return before the departure date (or today) */
                               min={
                                 searchData.departureDate ||
                                 new Date().toISOString().split("T")[0]
                               }
-                              /* Industry constraint: Maximum 1 year in the future */
                               max={
                                 new Date(
                                   new Date().setFullYear(

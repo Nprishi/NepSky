@@ -407,9 +407,9 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                   <CreditCard className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    value={passenger.passportNumber}
+                    value={passenger.passport}
                     onChange={(e) =>
-                      handleInputChange(index, "passportNumber", e.target.value)
+                      handleInputChange(index, "passport", e.target.value)
                     }
                     className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                       errors[`${index}-passportNumber`]
@@ -435,9 +435,9 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                   <User className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                   <input
                     type="text"
-                    value={passenger.nationalId || ""}
+                    value={passenger["national-id"] || ""}
                     onChange={(e) =>
-                      handleInputChange(index, "nationalId", e.target.value)
+                      handleInputChange(index, "national-id", e.target.value)
                     }
                     className={`w-full rounded-xl border py-2.5 pl-10 pr-3 focus:outline-none focus:ring-2 focus:ring-primary-500 ${
                       errors[`${index}-nationalId`]
@@ -453,7 +453,7 @@ const PassengerForm: React.FC<PassengerFormProps> = ({ onNext, onBack }) => {
                   </p>
                 )}
                 <p className="mt-1 text-sm text-gray-500">
-                  {flightType === "International"
+                  {flightType === "international"
                     ? "Passport required for international flights. National ID is optional."
                     : "National ID required for domestic flights. Passport is optional."}
                 </p>

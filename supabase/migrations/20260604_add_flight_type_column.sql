@@ -14,14 +14,26 @@ ADD COLUMN IF NOT EXISTS flight_type text NOT NULL DEFAULT 'domestic';
 -- Create index for faster queries
 CREATE INDEX IF NOT EXISTS idx_flights_flight_type ON flights(flight_type);
 
--- Update flight_type based on routes
--- Domestic: both cities in Nepal
--- International: at least one city outside Nepal
+-- Helper: Update flights to set flight_type based on whether both cities are in Nepal
+-- Domestic flights: both from and to are Nepal cities
+-- International flights: at least one city is outside Nepal
+
+-- First, set all flights with both cities in Nepal as domestic
 UPDATE flights
-SET flight_type = CASE
-  WHEN (from_location LIKE '%Kathmandu%' OR from_location LIKE '%Pokhara%' OR from_location LIKE '%Biratnagar%' OR from_location LIKE '%Dhangadhi%' OR from_location LIKE '%Janakpur%' OR from_location LIKE '%Birgunj%')
-   AND (to_location LIKE '%Kathmandu%' OR to_location LIKE '%Pokhara%' OR to_location LIKE '%Biratnagar%' OR to_location LIKE '%Dhangadhi%' OR to_location LIKE '%Janakpur%' OR to_location LIKE '%Birgunj%')
-  THEN 'domestic'
-  ELSE 'international'
-END
-WHERE flight_type = 'domestic';
+SET flight_type = 'domestic'
+WHERE 
+  (from_location ILIKE '%kathmandu%' OR from_location ILIKE '%pokhara%' OR from_location ILIKE '%biratnagar%' OR from_location ILIKE '%dhangadhi%' OR from_location ILIKE '%janakpur%' OR from_location ILIKE '%birgunj%' OR from_location ILIKE '%nepalgunj%')
+  AND 
+  (to_location ILIKE '%kathmandu%' OR to_location ILIKE '%pokhara%' OR to_location ILIKE '%biratnagar%' OR to_location ILIKE '%dhangadhi%' OR to_location ILIKE '%janakpur%' OR to_location ILIKE '%birgunj%' OR to_location ILIKE '%nepalgunj%');
+
+-- All remaining flights are international
+UPDATE flights
+SET flight_type = 'international'
+WHERE flight_type = 'domestic' AND NOT (
+  (from_location ILIKE '%kathmandu%' OR from_location ILIKE '%pokhara%' OR from_location ILIKE '%biratnagar%' OR from_location ILIKE '%dhangadhi%' OR from_location ILIKE '%janakpur%' OR from_location ILIKE '%birgunj%' OR from_location ILIKE '%nepalgunj%')
+  AND 
+  (to_location ILIKE '%kathmandu%' OR to_location ILIKE '%pokhara%' OR to_location ILIKE '%biratnagar%' OR to_location ILIKE '%dhangadhi%' OR to_location ILIKE '%janakpur%' OR to_location ILIKE '%birgunj%' OR to_location ILIKE '%nepalgunj%')
+);
+
+-- Verify the results
+SELECT flight_number, from_location, to_location, flight_type FROM flights ORDER BY flight_type;

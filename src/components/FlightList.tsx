@@ -52,6 +52,15 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
           .gt("available_seats", 0)
           .order("departure_time", { ascending: true });
 
+        // ALWAYS apply flight_type filter BEFORE other filters
+        const flightType = (searchFilters?.flightType || "Domestic").toLowerCase();
+        if (flightType === "domestic") {
+          flightQuery = flightQuery.eq("flight_type", "domestic");
+        } else if (flightType === "international") {
+          flightQuery = flightQuery.eq("flight_type", "international");
+        }
+
+        // Then apply location filters if provided
         if (searchFilters) {
           if (searchFilters.from) {
             flightQuery = flightQuery.ilike(
@@ -64,14 +73,6 @@ const FlightList: React.FC<FlightListProps> = ({ onNext, onBack }) => {
               "to_location",
               `%${searchFilters.to}%`,
             );
-          }
-          
-          // BUG FIX #2: Always apply flight_type filter (with safe default to 'domestic')
-          const flightType = searchFilters.flightType || "Domestic";
-          if (flightType === "Domestic") {
-            flightQuery = flightQuery.eq("flight_type", "domestic");
-          } else if (flightType === "International") {
-            flightQuery = flightQuery.eq("flight_type", "international");
           }
         }
 
